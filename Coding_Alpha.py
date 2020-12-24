@@ -5,12 +5,14 @@ Author(s): Matt Hansen
 '''
 import numpy as np
 import sympy as sp
+import scipy as sci
+import scipy.optimize
 import math
 
 #Define symbols used for the parameters and their vector form.
-p1, p2, p3, p4 = sp.symbols('p1, p2, p3, p4')
+#p1, p2, p3, p4 = sp.symbols('p1, p2, p3, p4')
 
-parameters = np.array([p1, p2, p3, p4])
+#parameters = np.array([p1, p2, p3, p4])
 
 #I don't know how the data vector will look in the end, but right now I'm thinking that it can be a list where each index represents a 
 #radial bin, and its corresponding value is the data at that radial bin
@@ -42,129 +44,339 @@ xi_tensor = [np.array([[1, 4, 7],
 	                   							 [13, 16, 19],
 	                   							 [1, 31, 2]])]
 
-productl = np.matmul(parameters, xi_tensor[radial_bin_l])
-productm = np.matmul(parameters, xi_tensor[radial_bin_m])
+#productl = np.matmul(parameters, xi_tensor[radial_bin_l])
+#productm = np.matmul(parameters, xi_tensor[radial_bin_m])
 
 #These print statements just form a visual aide of what these variables represent. Nothing more, just to check what the functions do
-print(xi_tensor[0][2])
+'''print(xi_tensor[0][2])
 print(productl)
 print(productm[0])
 
 print(productm[0] * productl[0])
+'''
 
 #I'm giving this a value of 1 right now so the code will compile. I do not know how it will look when we have the actual values
 #We should talk about how to represent this, I imagine it would be some sort of list or 2d matrix. Either way this will be easy
 #to change the code around since the variable is only used in the beginning of each definition and no where else
 precision_matrix_lm = 1
 
-quad_coeff_alpha = 2 * precision_matrix_lm * (productl[1] * productm[2] + productl[2] * productm[1])
+def product_l_(p1, p2, p3, p4):
+	p = [p1, p2, p3, p4]
+	return np.matmul(p, xi_tensor[radial_bin_l])
 
-linear_coeff_alpha = precision_matrix_lm * (productl[0] * productm[1] + productl[2] * productm[0] + 2 * productl[1] * productm[1] - \
-					 data_list[radial_bin_l] * productm[2] - data_list[radial_bin_m] * productl[2])
+def product_m_(p1, p2, p3, p4):
+	p = [p1, p2, p3, p4]
+	return np.matmul(p, xi_tensor[radial_bin_m])
 
-const_coeff_alpha = precision_matrix_lm * (productl[0] * productm[1] + productl[1] * productm[0] - data_list[radial_bin_l] * productm[1] - \
-					data_list[radial_bin_m] * productl[1])
+
+#Model as a list with each index being a radial bin
+def model_l_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	return productl[0] + productl[1] + productl[2]
+
+def model_m_(p1, p2, p3, p4):
+	productm = product_m_(p1, p2, p3, p4)
+	return productm[0] + productm[1] + productm[2]
+
+
+def quad_coeff_alpha_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return 2 * precision_matrix_lm * (productl[1] * productm[2] + productl[2] * productm[1])
+
+def linear_coeff_alpha_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (productl[0] * productm[1] + productl[2] * productm[0] + 2 * productl[1] * productm[1] \
+		   - data_list[radial_bin_l] * productm[2] - data_list[radial_bin_m] * productl[2])
+
+def const_coeff_alpha_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (productl[0] * productm[1] + productl[1] * productm[0] - data_list[radial_bin_l] * productm[1] - \
+		   data_list[radial_bin_m] * productl[1])
 
 #I'm not sure what delta_alpha we want to use
-delta_alpha = (-linear_coeff_alpha + sp.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha) / ( 2 * quad_coeff_alpha))
-delta_alpha_minus = (- linear_coeff_alpha - sp.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha) / ( 2 * quad_coeff_alpha))
+def delta_alpha_(p1, p2, p3, p4):
+	quad_coeff_alpha = quad_coeff_alpha_(p1, p2, p3, p4)
+	linear_coeff_alpha = linear_coeff_alpha_(p1, p2, p3, p4)
+	const_coeff_alpha = const_coeff_alpha_(p1, p2, p3, p4)
+	return (-linear_coeff_alpha + np.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha) / ( 2 * quad_coeff_alpha))
+#delta_alpha_minus = (- linear_coeff_alpha - sp.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha) / ( 2 * quad_coeff_alpha))
 
 #Define all the alpha derivatives with respect to its coefficients
-dalpha_dquad = linear_coeff_alpha / (2 * quad_coeff_alpha**2) + sp.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha) \
- 			   / (2 * quad_coeff_alpha**2) + const_coeff_alpha / (quad_coeff_alpha * sp.sqrt(linear_coeff_alpha**2 \
+def dalpha_dquad_(p1, p2, p3, p4):
+	quad_coeff_alpha = quad_coeff_alpha_(p1, p2, p3, p4)
+	linear_coeff_alpha = linear_coeff_alpha_(p1, p2, p3, p4)
+	const_coeff_alpha = const_coeff_alpha_(p1, p2, p3, p4)
+	return linear_coeff_alpha / (2 * quad_coeff_alpha**2) + np.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha) \
+ 			   / (2 * quad_coeff_alpha**2) + const_coeff_alpha / (quad_coeff_alpha * np.sqrt(linear_coeff_alpha**2 \
  			   - 4 * quad_coeff_alpha * const_coeff_alpha))
 
-dalpha_dlin = - 1 / (2 * quad_coeff_alpha) + linear_coeff_alpha / ( 2 * quad_coeff_alpha * sp.sqrt(linear_coeff_alpha**2 \
+def dalpha_dlin_(p1, p2, p3, p4):
+	quad_coeff_alpha = quad_coeff_alpha_(p1, p2, p3, p4)
+	linear_coeff_alpha = linear_coeff_alpha_(p1, p2, p3, p4)
+	const_coeff_alpha = const_coeff_alpha_(p1, p2, p3, p4)
+	return - 1 / (2 * quad_coeff_alpha) + linear_coeff_alpha / ( 2 * quad_coeff_alpha * np.sqrt(linear_coeff_alpha**2 \
  			  - 4 * quad_coeff_alpha * const_coeff_alpha))
 
-dalpha_dconst = const_coeff_alpha * sp.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha)
+def dalpha_dconst_(p1, p2, p3, p4):
+	quad_coeff_alpha = quad_coeff_alpha_(p1, p2, p3, p4)
+	linear_coeff_alpha = linear_coeff_alpha_(p1, p2, p3, p4)
+	const_coeff_alpha = const_coeff_alpha_(p1, p2, p3, p4)
+	return const_coeff_alpha * np.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha)
 
 
 #Define derivatives of the quadratic delta_alpha coefficient term (a in paper) with respect to the parameters
-dquad_dp1 = 2 * precision_matrix_lm * (xi_tensor[radial_bin_l][0][1] * productm[2] + xi_tensor[radial_bin_m][0][2] * productl[1] \
+def dquad_dp1_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return 2 * precision_matrix_lm * (xi_tensor[radial_bin_l][0][1] * productm[2] + xi_tensor[radial_bin_m][0][2] * productl[1] \
 			+ xi_tensor[radial_bin_m][0][1] * productl[2] + xi_tensor[radial_bin_l][0][2] * productm[1])
 
-dquad_dp2 = 2 * precision_matrix_lm * (xi_tensor[radial_bin_l][1][1] * productm[2] + xi_tensor[radial_bin_m][1][2] * productl[1] \
+def dquad_dp2_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return 2 * precision_matrix_lm * (xi_tensor[radial_bin_l][1][1] * productm[2] + xi_tensor[radial_bin_m][1][2] * productl[1] \
 			+ xi_tensor[radial_bin_m][1][1] * productl[2] + xi_tensor[radial_bin_l][1][2] * productm[1])
 
-dquad_dp3 = 2 * precision_matrix_lm * (xi_tensor[radial_bin_l][2][1] * productm[2] + xi_tensor[radial_bin_m][2][2] * productl[1] \
+def dquad_dp3_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return 2 * precision_matrix_lm * (xi_tensor[radial_bin_l][2][1] * productm[2] + xi_tensor[radial_bin_m][2][2] * productl[1] \
 			+ xi_tensor[radial_bin_m][2][1] * productl[2] + xi_tensor[radial_bin_l][2][2] * productm[1])
 
-dquad_dp4 = 2 * precision_matrix_lm * (xi_tensor[radial_bin_l][3][1] * productm[2] + xi_tensor[radial_bin_m][3][2] * productl[1] \
+def dquad_dp4_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return 2 * precision_matrix_lm * (xi_tensor[radial_bin_l][3][1] * productm[2] + xi_tensor[radial_bin_m][3][2] * productl[1] \
 			+ xi_tensor[radial_bin_m][3][1] * productl[2] + xi_tensor[radial_bin_l][3][2] * productm[1])
 
 
 #Define derivatives of the linear delta_alpha coefficient term (a in paper) with respect to the parameters
-dlin_dp1 = precision_matrix_lm * (xi_tensor[radial_bin_l][0][0] * productm[2] + productl[0] * xi_tensor[radial_bin_m][0][2] \
-		   xi_tensor[radial_bin_l][0][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][0][0] \
+def dlin_dp1_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (xi_tensor[radial_bin_l][0][0] * productm[2] + productl[0] * xi_tensor[radial_bin_m][0][2] \
+		   + xi_tensor[radial_bin_l][0][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][0][0] \
 		   - data_list[radial_bin_l] * xi_tensor[radial_bin_m][0][1] - data_list[radial_bin_m] * xi_tensor[radial_bin_l][0][1])
 
-dlin_dp2 = precision_matrix_lm * (xi_tensor[radial_bin_l][1][0] * productm[2] + productl[0] * xi_tensor[radial_bin_m][1][2] \
-		   xi_tensor[radial_bin_l][1][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][1][0] \
+def dlin_dp2_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (xi_tensor[radial_bin_l][1][0] * productm[2] + productl[0] * xi_tensor[radial_bin_m][1][2] \
+		   + xi_tensor[radial_bin_l][1][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][1][0] \
 		   - data_list[radial_bin_l] * xi_tensor[radial_bin_m][1][1] - data_list[radial_bin_m] * xi_tensor[radial_bin_l][1][1])
 
-dlin_dp3 = precision_matrix_lm * (xi_tensor[radial_bin_l][2][0] * productm[2] + productl[0] * xi_tensor[radial_bin_m][2][2] \
-		   xi_tensor[radial_bin_l][2][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][2][0] \
+def dlin_dp3_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (xi_tensor[radial_bin_l][2][0] * productm[2] + productl[0] * xi_tensor[radial_bin_m][2][2] \
+		   + xi_tensor[radial_bin_l][2][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][2][0] \
 		   - data_list[radial_bin_l] * xi_tensor[radial_bin_m][2][1] - data_list[radial_bin_m] * xi_tensor[radial_bin_l][2][1])
 
-dlin_dp4 = precision_matrix_lm * (xi_tensor[radial_bin_l][3][0] * productm[2] + productl[0] * xi_tensor[radial_bin_m][3][2] \
-		   xi_tensor[radial_bin_l][3][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][3][0] \
+def dlin_dp4_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (xi_tensor[radial_bin_l][3][0] * productm[2] + productl[0] * xi_tensor[radial_bin_m][3][2] \
+		   + xi_tensor[radial_bin_l][3][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][3][0] \
 		   - data_list[radial_bin_l] * xi_tensor[radial_bin_m][3][1] - data_list[radial_bin_m] * xi_tensor[radial_bin_l][3][1])
 
 
 #Define derivatives of the linear delta_alpha coefficient term (a in paper) with respect to the parameters
-dconst_dp1 = precision_matrix_lm * (xi_tensor[radial_bin_l][0][0] * productm[1] + productl[0] * xi_tensor[radial_bin_m][0][1] \
+def dconst_dp1_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (xi_tensor[radial_bin_l][0][0] * productm[1] + productl[0] * xi_tensor[radial_bin_m][0][1] \
 			 + xi_tensor[radial_bin_l][0][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][0][0] - data_list[radial_bin_l] \
 			 * xi_tensor[radial_bin_m][0][1] - data_list[radial_bin_m] * xi_tensor[radial_bin_l][0][1])
 
-dconst_dp2 = precision_matrix_lm * (xi_tensor[radial_bin_l][1][0] * productm[1] + productl[0] * xi_tensor[radial_bin_m][1][1] \
+def dconst_dp2_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (xi_tensor[radial_bin_l][1][0] * productm[1] + productl[0] * xi_tensor[radial_bin_m][1][1] \
 			 + xi_tensor[radial_bin_l][1][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][1][0] - data_list[radial_bin_l] \
 			 * xi_tensor[radial_bin_m][1][1] - data_list[radial_bin_m] * xi_tensor[radial_bin_l][1][1])
 
-dconst_dp3 = precision_matrix_lm * (xi_tensor[radial_bin_l][2][0] * productm[1] + productl[0] * xi_tensor[radial_bin_m][2][1] \
+def dconst_dp3_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (xi_tensor[radial_bin_l][2][0] * productm[1] + productl[0] * xi_tensor[radial_bin_m][2][1] \
 			 + xi_tensor[radial_bin_l][2][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][2][0] - data_list[radial_bin_l] \
 			 * xi_tensor[radial_bin_m][2][1] - data_list[radial_bin_m] * xi_tensor[radial_bin_l][2][1])
 
-dconst_dp4 = precision_matrix_lm * (xi_tensor[radial_bin_l][3][0] * productm[1] + productl[0] * xi_tensor[radial_bin_m][3][1] \
+def dconst_dp4_(p1, p2, p3, p4):
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+	return precision_matrix_lm * (xi_tensor[radial_bin_l][3][0] * productm[1] + productl[0] * xi_tensor[radial_bin_m][3][1] \
 			 + xi_tensor[radial_bin_l][3][1] * productm[0] + productl[1] * xi_tensor[radial_bin_m][3][0] - data_list[radial_bin_l] \
 			 * xi_tensor[radial_bin_m][3][1] - data_list[radial_bin_m] * xi_tensor[radial_bin_l][3][1])
 
 
 #Define alpah derivatives with respect to the parameters. Given the values of 1 as a temporary holder
-dalpha_dp1 = dalpha_dquad * dquad_dp1 + dalpha_dlin * dlin_dp1 + dalpha_dconst * dconst_dp1
+def dalpha_dp1_(p1, p2, p3, p4):
+	dalpha_dquad = dalpha_dquad_(p1, p2, p3, p4)
+	dquad_dp1 = dquad_dp1_(p1, p2, p3, p4)
+	dalpha_dlin = dalpha_dlin_(p1, p2, p3, p4)
+	dlin_dp1 = dlin_dp1_(p1, p2, p3, p4)
+	dalpha_dconst = dalpha_dconst_(p1, p2, p3, p4)
+	dconst_dp1 = dconst_dp1_(p1, p2, p3, p4)
 
-dalpha_dp2 = dalpha_dquad * dquad_dp2 + dalpha_dlin * dlin_dp2 + dalpha_dconst * dconst_dp2
+	return dalpha_dquad * dquad_dp1 + dalpha_dlin * dlin_dp1 + dalpha_dconst * dconst_dp1
 
-dalpha_dp3 = dalpha_dquad * dquad_dp3 + dalpha_dlin * dlin_dp3 + dalpha_dconst * dconst_dp3
+def dalpha_dp2_(p1, p2, p3, p4):
+	dalpha_dquad = dalpha_dquad_(p1, p2, p3, p4)
+	dquad_dp2 = dquad_dp2_(p1, p2, p3, p4)
+	dalpha_dlin = dalpha_dlin_(p1, p2, p3, p4)
+	dlin_dp2 = dlin_dp2_(p1, p2, p3, p4)
+	dalpha_dconst = dalpha_dconst_(p1, p2, p3, p4)
+	dconst_dp2 = dconst_dp2_(p1, p2, p3, p4)
 
-dalpha_dp4 = dalpha_dquad * dquad_dp4 + dalpha_dlin * dlin_dp4 + dalpha_dconst * dconst_dp4
+	return dalpha_dquad * dquad_dp2 + dalpha_dlin * dlin_dp2 + dalpha_dconst * dconst_dp2
+
+def dalpha_dp3_(p1, p2, p3, p4):
+	dalpha_dquad = dalpha_dquad_(p1, p2, p3, p4)
+	dquad_dp3 = dquad_dp3_(p1, p2, p3, p4)
+	dalpha_dlin = dalpha_dlin_(p1, p2, p3, p4)
+	dlin_dp3 = dlin_dp3_(p1, p2, p3, p4)
+	dalpha_dconst = dalpha_dconst_(p1, p2, p3, p4)
+	dconst_dp3 = dconst_dp3_(p1, p2, p3, p4)
+
+	return dalpha_dquad * dquad_dp3 + dalpha_dlin * dlin_dp3 + dalpha_dconst * dconst_dp3
+
+def dalpha_dp4_(p1, p2, p3, p4):
+	dalpha_dquad = dalpha_dquad_(p1, p2, p3, p4)
+	dquad_dp4 = dquad_dp4_(p1, p2, p3, p4)
+	dalpha_dlin = dalpha_dlin_(p1, p2, p3, p4)
+	dlin_dp4 = dlin_dp4_(p1, p2, p3, p4)
+	dalpha_dconst = dalpha_dconst_(p1, p2, p3, p4)
+	dconst_dp4 = dconst_dp4_(p1, p2, p3, p4)
+	return dalpha_dquad * dquad_dp4 + dalpha_dlin * dlin_dp4 + dalpha_dconst * dconst_dp4
 
 
 #Model derivatives
-dmodel_l_dp1 = xi_tensor[radial_bin_l][0][0] + xi_tensor[radial_bin_l][0][1] * delta_alpha + xi_tensor[radial_bin_l][0][2] * delta_alpha**2 + \
+def dmodel_l_dp1_(p1, p2, p3, p4):
+	delta_alpha = delta_alpha_(p1, p2, p3, p4)
+	dalpha_dp1 = dalpha_dp1_(p1, p2, p3, p4)
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+
+	return xi_tensor[radial_bin_l][0][0] + xi_tensor[radial_bin_l][0][1] * delta_alpha + xi_tensor[radial_bin_l][0][2] * delta_alpha**2 + \
 			   dalpha_dp1 * (productl[1] + delta_alpha * productl[2])
 
-dmodel_m_dp1 = xi_tensor[radial_bin_m][0][0] + xi_tensor[radial_bin_m][0][1] * delta_alpha + xi_tensor[radial_bin_m][0][2] * delta_alpha**2 + \
+def dmodel_m_dp1_(p1, p2, p3, p4):
+	delta_alpha = delta_alpha_(p1, p2, p3, p4)
+	dalpha_dp1 = dalpha_dp1_(p1, p2, p3, p4)
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+
+	return xi_tensor[radial_bin_m][0][0] + xi_tensor[radial_bin_m][0][1] * delta_alpha + xi_tensor[radial_bin_m][0][2] * delta_alpha**2 + \
 			   dalpha_dp1 * (productm[1] + delta_alpha * productm[2])
 
-dmodel_l_dp2 = xi_tensor[radial_bin_l][1][0] + xi_tensor[radial_bin_l][1][1] * delta_alpha + xi_tensor[radial_bin_l][1][2] * delta_alpha**2 + \
+def dmodel_l_dp2_(p1, p2, p3, p4):
+	delta_alpha = delta_alpha_(p1, p2, p3, p4)
+	dalpha_dp2 = dalpha_dp2_(p1, p2, p3, p4)
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+
+	return xi_tensor[radial_bin_l][1][0] + xi_tensor[radial_bin_l][1][1] * delta_alpha + xi_tensor[radial_bin_l][1][2] * delta_alpha**2 + \
 			   dalpha_dp2 * (productl[1] + delta_alpha * productl[2])
 
-dmodel_m_dp2 = xi_tensor[radial_bin_m][1][0] + xi_tensor[radial_bin_m][1][1] * delta_alpha + xi_tensor[radial_bin_m][1][2] * delta_alpha**2 + \
+def dmodel_m_dp2_(p1, p2, p3, p4):
+	delta_alpha = delta_alpha_(p1, p2, p3, p4)
+	dalpha_dp2 = dalpha_dp2_(p1, p2, p3, p4)
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+
+	return xi_tensor[radial_bin_m][1][0] + xi_tensor[radial_bin_m][1][1] * delta_alpha + xi_tensor[radial_bin_m][1][2] * delta_alpha**2 + \
 			   dalpha_dp2 * (productm[1] + delta_alpha * productm[2])
 
-dmodel_l_dp3 = xi_tensor[radial_bin_l][2][0] + xi_tensor[radial_bin_l][2][1] * delta_alpha + xi_tensor[radial_bin_l][2][2] * delta_alpha**2 + \
+def dmodel_l_dp3_(p1, p2, p3, p4):
+	delta_alpha = delta_alpha_(p1, p2, p3, p4)
+	dalpha_dp3 = dalpha_dp3_(p1, p2, p3, p4)
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+
+	return xi_tensor[radial_bin_l][2][0] + xi_tensor[radial_bin_l][2][1] * delta_alpha + xi_tensor[radial_bin_l][2][2] * delta_alpha**2 + \
 			   dalpha_dp3 * (productl[1] + delta_alpha * productl[2])
 
-dmodel_m_dp3 = xi_tensor[radial_bin_m][2][0] + xi_tensor[radial_bin_m][2][1] * delta_alpha + xi_tensor[radial_bin_m][2][2] * delta_alpha**2 + \
+def dmodel_m_dp3_(p1, p2, p3, p4):
+	delta_alpha = delta_alpha_(p1, p2, p3, p4)
+	dalpha_dp3 = dalpha_dp3_(p1, p2, p3, p4)
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+
+	return xi_tensor[radial_bin_m][2][0] + xi_tensor[radial_bin_m][2][1] * delta_alpha + xi_tensor[radial_bin_m][2][2] * delta_alpha**2 + \
 			   dalpha_dp3 * (productm[1] + delta_alpha * productm[2])
 
-dmodel_l_dp4 = xi_tensor[radial_bin_l][3][0] + xi_tensor[radial_bin_l][3][1] * delta_alpha + xi_tensor[radial_bin_l][3][2] * delta_alpha**2 + \
-			   dalpha_dp2 * (productl[1] + delta_alpha * productl[2])
+def dmodel_l_dp4_(p1, p2, p3, p4):
+	delta_alpha = delta_alpha_(p1, p2, p3, p4)
+	dalpha_dp4 = dalpha_dp4_(p1, p2, p3, p4)
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
 
-dmodel_m_dp4 = xi_tensor[radial_bin_m][3][0] + xi_tensor[radial_bin_m][3][1] * delta_alpha + xi_tensor[radial_bin_m][3][2] * delta_alpha**2 + \
-			   dalpha_dp2 * (productm[1] + delta_alpha * productm[2])
+	return xi_tensor[radial_bin_l][3][0] + xi_tensor[radial_bin_l][3][1] * delta_alpha + xi_tensor[radial_bin_l][3][2] * delta_alpha**2 + \
+			   dalpha_dp4 * (productl[1] + delta_alpha * productl[2])
 
-#Loglikelihood equations
+def dmodel_m_dp4_(p1, p2, p3, p4):
+	delta_alpha = delta_alpha_(p1, p2, p3, p4)
+	dalpha_dp4 = dalpha_dp4_(p1, p2, p3, p4)
+	productl = product_l_(p1, p2, p3, p4)
+	productm = product_m_(p1, p2, p3, p4)
+
+	return xi_tensor[radial_bin_m][3][0] + xi_tensor[radial_bin_m][3][1] * delta_alpha + xi_tensor[radial_bin_m][3][2] * delta_alpha**2 + \
+			   dalpha_dp4 * (productm[1] + delta_alpha * productm[2])
+
+
+#Loglikelihood equations, the derivatives with respect to the parameters
 #dLikelihood_dparam = precision_matrix * (-data_l * dmodel_m_dparam - data_m * dmodel_l_dparam + dmodel_l_dparam * model_m + dmodel_m_dparam * model_l)
+def dlog_dp1_(p1, p2, p3, p4):
+	dmodel_l_dp1 = dmodel_l_dp1_(p1, p2, p3, p4)
+	dmodel_m_dp1 = dmodel_m_dp1_(p1, p2, p3, p4)
+	model_l = model_l_(p1, p2, p3, p4)
+	model_m = model_m_(p1, p2, p3, p4)
 
+	return precision_matrix_lm * (-data_list[radial_bin_l] * dmodel_m_dp1 - data_list[radial_bin_m] * dmodel_l_dp1 + dmodel_l_dp1 * model_m \
+		   + dmodel_m_dp1 * model_l)
+
+def dlog_dp2_(p1, p2, p3, p4):
+	dmodel_l_dp2 = dmodel_l_dp2_(p1, p2, p3, p4)
+	dmodel_m_dp2 = dmodel_m_dp2_(p1, p2, p3, p4)
+	model_l = model_l_(p1, p2, p3, p4)
+	model_m = model_m_(p1, p2, p3, p4)
+
+	return precision_matrix_lm * (-data_list[radial_bin_l] * dmodel_m_dp2 - data_list[radial_bin_m] * dmodel_l_dp2 + dmodel_l_dp2 * model_m \
+		   + dmodel_m_dp2 * model_l)
+
+def dlog_dp3_(p1, p2, p3, p4):
+	dmodel_l_dp3 = dmodel_l_dp3_(p1, p2, p3, p4)
+	dmodel_m_dp3 = dmodel_m_dp3_(p1, p2, p3, p4)
+	model_l = model_l_(p1, p2, p3, p4)
+	model_m = model_m_(p1, p2, p3, p4)
+
+	return precision_matrix_lm * (-data_list[radial_bin_l] * dmodel_m_dp3 - data_list[radial_bin_m] * dmodel_l_dp3 + dmodel_l_dp3 * model_m \
+		   + dmodel_m_dp3 * model_l)
+
+def dlog_dp4_(p1, p2, p3, p4):
+	dmodel_l_dp4 = dmodel_l_dp4_(p1, p2, p3, p4)
+	dmodel_m_dp4 = dmodel_m_dp4_(p1, p2, p3, p4)
+	model_l = model_l_(p1, p2, p3, p4)
+	model_m = model_m_(p1, p2, p3, p4)
+
+	return precision_matrix_lm * (-data_list[radial_bin_l] * dmodel_m_dp4 - data_list[radial_bin_m] * dmodel_l_dp4 + dmodel_l_dp4 * model_m \
+		   + dmodel_m_dp4 * model_l)
+
+
+#Code to solve the system of equations
+def functions_(parameters):
+	p1, p2, p3, p4 = parameters[:4]
+
+	log1 = dlog_dp1_(p1, p2, p3, p4)
+	log2 = dlog_dp2_(p1, p2, p3, p4)
+	log3 = dlog_dp3_(p1, p2, p3, p4)
+	log4 = dlog_dp4_(p1, p2, p3, p4)
+
+	return(log1, log2, log3, log4)
+
+x0 = np.array([1, 10, 1, 111])
+sol = sci.optimize.root(functions_, x0, method='hybr')
