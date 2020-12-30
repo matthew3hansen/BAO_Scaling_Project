@@ -9,11 +9,6 @@ import scipy as sci
 import scipy.optimize
 import math
 
-#Define symbols used for the parameters and their vector form.
-#p1, p2, p3, p4 = sp.symbols('p1, p2, p3, p4')
-
-#parameters = np.array([p1, p2, p3, p4])
-
 #I don't know how the data vector will look in the end, but right now I'm thinking that it can be a list where each index represents a 
 #radial bin, and its corresponding value is the data at that radial bin
 data_list = [12, 12]
@@ -44,18 +39,7 @@ xi_tensor = [np.array([[1, 4, 7],
 	                   							 [13, 16, 19],
 	                   							 [1, 31, 2]])]
 
-#productl = np.matmul(parameters, xi_tensor[radial_bin_l])
-#productm = np.matmul(parameters, xi_tensor[radial_bin_m])
-
-#These print statements just form a visual aide of what these variables represent. Nothing more, just to check what the functions do
-'''print(xi_tensor[0][2])
-print(productl)
-print(productm[0])
-
-print(productm[0] * productl[0])
-'''
-
-#I'm giving this a value of 1 right now so the code will compile. I do not know how it will look when we have the actual values
+#I'm giving the precision matrix a value of 1 right now so the code will compile. I do not know how it will look when we have the actual values
 #We should talk about how to represent this, I imagine it would be some sort of list or 2d matrix. Either way this will be easy
 #to change the code around since the variable is only used in the beginning of each definition and no where else
 precision_matrix_lm = 1
