@@ -1,3 +1,4 @@
+#Author: Nina Brown
 import os 
 import sys
 import numpy as np
