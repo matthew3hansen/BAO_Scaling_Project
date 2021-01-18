@@ -363,8 +363,8 @@ def functions_(parameters):
 
 	return(log1, log2, log3, log4)
 
-CAMB_results=camb_transfer()
-print("this is what I'm looking for", CAMB_results[6])
-
+CAMB_results = CAMB_General_Code.camb_transfer()
+print("this is what I'm looking for, MY CODE: ", CAMB_results[6])
+'''
 x0 = np.array([1, 10, 1, 111])
-sol = sci.optimize.root(functions_, x0, method='hybr')
+sol = sci.optimize.root(functions_, x0, method='hybr')'''
