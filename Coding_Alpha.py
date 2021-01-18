@@ -8,6 +8,7 @@ import sympy as sp
 import scipy as sci
 import scipy.optimize
 import math
+import CAMB_General_Code 
 
 #I don't know how the data vector will look in the end, but right now I'm thinking that it can be a list where each index represents a 
 #radial bin, and its corresponding value is the data at that radial bin
@@ -361,6 +362,9 @@ def functions_(parameters):
 	log4 = dlog_dp4_(p1, p2, p3, p4)
 
 	return(log1, log2, log3, log4)
+
+CAMB_results=camb_transfer()
+print("this is what I'm looking for", CAMB_results[6])
 
 x0 = np.array([1, 10, 1, 111])
 sol = sci.optimize.root(functions_, x0, method='hybr')
