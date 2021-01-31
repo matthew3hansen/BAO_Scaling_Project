@@ -412,13 +412,14 @@ print(((kh**2 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * d
 print(dk.shape)
 print("My sigma: ", (np.sum(vector_want)))
 
+#This function should give us xi_1, the templates corresponding to linear bias
 r, xi_1 = P2xi(kh)(pk[0])
 print(r.shape)
 print("XI: ", xi_1.shape)
 '''
 xi - spatial templates at r for z = 0, 
 '''
-
+#Alex said that spline will allow us to interpolate the data to then take the derivative, numerically
 spl = Spline(r, xi_1)
 
 x = spl(r * 1.1)
@@ -432,7 +433,7 @@ xi_1_dprime = (x + y - 2*xi_1) / 0.1**2
 print("Xi_prime from Alex's method(spline): ")
 print(xi_1_prime)
 
-
+#This should be the integral that you put in our paper, Zack
 xi_prime = -1 / (2*math.pi**2 ) * kh**3 * dk * special.spherical_jn(1, kh*r) * pk[0]
 print("INTEGRAL from paper xi_prime: ")
 print(r * np.sum(xi_prime))
