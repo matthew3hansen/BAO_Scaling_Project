@@ -14,6 +14,9 @@ import sys, platform, os
 import matplotlib
 from matplotlib import pyplot as plt
 import CAMB_General_Code 
+from mcfit import P2xi
+from scipy.interpolate import InterpolatedUnivariateSpline as Spline
+
 
 #I don't know how the data vector will look in the end, but right now I'm thinking that it can be a list where each index represents a 
 #radial bin, and its corresponding value is the data at that radial bin
@@ -373,7 +376,7 @@ x0 = np.array([1, 10, 1, 111])
 sol = sci.optimize.root(functions_, x0, method='hybr')
 '''
 
-kh, z, pk = CAMB_General_Code.get_matter_spectrum()
+
 '''for i, (redshift, line) in enumerate(zip(z,['-','--'])):
 	plt.loglog(kh, pk[i,:], color='k', ls = line)'''
 '''
@@ -384,8 +387,7 @@ plt.legend(['z = 0', 'z = .8'], loc='lower left');
 plt.title('Matter power at z=%s and z= %s'%tuple(z));
 plt.show()
 '''
-k, z, power_spectrum = CAMB_General_Code.get_linear_matter_power_spectrum()
-print(power_spectrum)
+#k, z, power_spectrum = CAMB_General_Code.get_linear_matter_power_spectrum()
 '''
 sigma = integrate.quad(lambda x: x**2 / (2 * math.pi**2) * ((3 * special.spherical_jn(1, 8*x)) / (8 * x))**2 * pk[0, int(x)], 0, 200)
 print(sigma)'''
@@ -402,5 +404,35 @@ plt.plot(x, np.log(kh))
 plt.xlabel("Index")
 plt.ylabel("log(kh)")
 plt.show()'''
+kh, z, pk = CAMB_General_Code.get_matter_spectrum()
 
-print((np.sum(kh**3 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * ((np.log(kh[-1]) - np.log(kh[0])) / len(kh)))) 
+dk = np.gradient(kh)
+vector_want = 1 / (2 * math.pi**2 ) * (kh**2 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * dk
+print(((kh**2 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * dk).shape)
+print(dk.shape)
+print("My sigma: ", (np.sum(vector_want)))
+
+r, xi_1 = P2xi(kh)(pk[0])
+print(r.shape)
+print("XI: ", xi_1.shape)
+'''
+xi - spatial templates at r for z = 0, 
+'''
+
+spl = Spline(r, xi_1)
+
+x = spl(r * 1.1)
+y = spl(r * 0.9)
+
+xi_1_prime = (x - y) / 0.2
+
+
+xi_1_dprime = (x + y - 2*xi_1) / 0.1**2
+
+print("Xi_prime from Alex's method(spline): ")
+print(xi_1_prime)
+
+
+xi_prime = -1 / (2*math.pi**2 ) * kh**3 * dk * special.spherical_jn(1, kh*r) * pk[0]
+print("INTEGRAL from paper xi_prime: ")
+print(r * np.sum(xi_prime))
