@@ -406,24 +406,80 @@ plt.ylabel("log(kh)")
 plt.show()'''
 kh, z, pk = CAMB_General_Code.get_matter_spectrum()
 
-dk = np.gradient(kh)
-vector_want = 1 / (2 * math.pi**2 ) * (kh**2 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * dk
-print(((kh**2 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * dk).shape)
-print(dk.shape)
+plt.plot(kh, pk[0])
+plt.title('pk at z = 0 vs kh')
+plt.xlabel('kh')
+plt.ylabel('pk')
+plt.show()
+
+plt.plot(np.log(kh), pk[0])
+plt.title('pk at z = 0 vs log(kh)')
+plt.xlabel('log(kh)')
+plt.ylabel('pk')
+plt.show()
+
+plt.plot(kh, np.log(pk[0]))
+plt.xlabel("log(kh)")
+plt.ylabel("log(pk)")
+plt.title('log(pk) at z = 0')
+plt.show()
+
+dlogkh = np.gradient(kh)
+vector_want = 1 / (2 * math.pi**2 ) * (kh**2 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * dlogkh
+#Sigma_8^2
 print("My sigma: ", (np.sum(vector_want)))
 
+plt.plot(kh, np.log(kh**3 * pk[0] * np.exp(-kh**2)))
+plt.xlabel("log(kh)")
+plt.ylabel("log(kh**3 * pk * exp)")
+plt.title('log(kh**3 * pk * exp) at z=0')
+plt.show()
+
+#This should be the integral that you put in our paper, Zack
+r = [i for i in range(300)]
+dlogkh = kh[1] - kh[0]
+xi_1_paper = [i for i in range(300)]
+for i in range(len(r)):
+	xi_1_paper[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * kh**3 * special.spherical_jn(0, kh * r[i]) * pk[0]) * dlogkh 
+
+plt.plot(r, xi_1_paper)
+plt.xlabel("r")
+plt.ylabel("r[i]**2 * xi")
+plt.title('r[i]**2 * xi vs r')
+plt.show()
+
+
+#Below is attempting to find derivatives with formula form paper
+dxi_1_paper = [i for i in range(300)]
+for i in range(len(r)):
+	dxi_1_paper[i] = -r[i] * np.sum((kh**2 * dlogkh) / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r[i]) * pk[0]) 
+
+plt.plot(r, dxi_1_paper)
+plt.xlabel("r")
+plt.ylabel("dxi")
+plt.title('dxi / d(alpha)|alpha = 1 {from paper}')
+plt.show()
+
+
+'''
+I think something is wrong with what this produces
 #This function should give us xi_1, the templates corresponding to linear bias
 r, xi_1 = P2xi(kh)(pk[0])
 print(xi_1)
 print(r.shape)
-print("XI: ", xi_1.shape)
-plt.plot(kh, xi_1)
+#print("XI: ", xi_1.shape)
+
+plt.plot(r, xi_1)
 plt.xlabel("r")
 plt.ylabel("xi_1")
 plt.show()
 '''
-xi - spatial templates at r for z = 0, 
+
 '''
+#I think something wrong is happening with this function
+r, xi_1 = P2xi(kh)(pk[0])
+print(xi_1)
+print(r.shape)
 #Alex said that spline will allow us to interpolate the data to then take the derivative, numerically
 spl = Spline(r, xi_1)
 
@@ -431,28 +487,11 @@ x = spl(r * 1.1)
 y = spl(r * 0.9)
 
 xi_1_prime = (x - y) / 0.2
-plt.plot(kh, xi_1_prime)
+
+plt.plot(r, xi_1)
 plt.xlabel("r")
 plt.ylabel("xi_1_prime")
 plt.show()
 
 xi_1_dprime = (x + y - 2*xi_1) / 0.1**2
-
-print("Xi_prime from Alex's method(spline): ")
-print(xi_1_prime)
-
-
-#This should be the integral that you put in our paper, Zack
-r = [i for i in range(0, 200)]
-xi_prime = -1 / (2*math.pi**2 ) * kh**3 * dk * special.spherical_jn(1, kh*r) * pk[0]
-#print("INTEGRAL from paper xi_prime: ")
-#print(r * np.sum(xi_prime))
-xi_1_paper = [i for i in range(0, 200)]
-for i in range(len(r)):
-	xi_1_paper[i] = np.sum(1 / (2 * math.pi**2) * dk * kh**2 * special.spherical_jn(0, kh * r[i]) * pk[0])
-print("Xi_1 from paper: ")
-print(xi_1_paper)
-plt.plot(r, xi_1_paper)
-plt.xlabel("r")
-plt.ylabel("xi_1 paper")
-plt.show()
+'''
