@@ -407,6 +407,7 @@ plt.ylabel("log(kh)")
 plt.show()'''
 kh, z, pk = CAMB_General_Code.get_matter_spectrum()
 
+#Made this function as a history to run all the graphs if need to be to check something
 def old_graphs():
 	plt.plot(kh, pk[0])
 	plt.title('pk at z = 0 vs kh')
