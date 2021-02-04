@@ -498,19 +498,27 @@ plt.ylabel("r[i]**2 * xi")
 plt.title('r[i]**2 * xi vs r')
 plt.show()
 
+
 i = 0
 for r_val in r:
-	dxi_1[i] = -r[i] * np.sum((kh**3 * dlogkh) / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r_val) * pk[0] * np.exp(-kh**2))
+	dxi_1[i] = -r[i] * np.sum(kh**2  / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r_val) * pk[0] * np.exp(-kh**2) * kh) * dlogkh
 	i += 1
+
+plt.plot(r, dxi_1)
+plt.xlabel("r")
+plt.ylabel("dxi_1")
+plt.title('dxi_1 vs r')
+plt.show()
+
 
 xi_1_recovered = np.zeros(len(r))
 for i in range(len(r)):
-	xi_1_recovered[i] = r[i]**2 * np.sum(dxi_1[0:i])
+	xi_1_recovered[i] = (r[-1] - r[0]) / len(r) * np.sum(dxi_1[0:i])
 
 plt.plot(r, xi_1_recovered)
 plt.xlabel("r")
-plt.ylabel("r[i]**2 * xi_1_recovered")
-plt.title('r[i]**2 * xi_1_recovered vs r')
+plt.ylabel("xi_1_recovered")
+plt.title('xi_1_recovered vs r')
 plt.show()
 
 '''
