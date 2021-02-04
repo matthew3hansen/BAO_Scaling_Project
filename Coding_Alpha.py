@@ -7,6 +7,7 @@ import numpy as np
 import sympy as sp
 import scipy as sci
 import scipy.optimize
+import time
 import scipy.integrate as integrate
 import scipy.special as special
 import math
@@ -406,76 +407,136 @@ plt.ylabel("log(kh)")
 plt.show()'''
 kh, z, pk = CAMB_General_Code.get_matter_spectrum()
 
-plt.plot(kh, pk[0])
-plt.title('pk at z = 0 vs kh')
-plt.xlabel('kh')
-plt.ylabel('pk')
-plt.show()
+def old_graphs():
+	plt.plot(kh, pk[0])
+	plt.title('pk at z = 0 vs kh')
+	plt.xlabel('kh')
+	plt.ylabel('pk')
+	plt.show()
 
-plt.plot(np.log(kh), pk[0])
-plt.title('pk at z = 0 vs log(kh)')
-plt.xlabel('log(kh)')
-plt.ylabel('pk')
-plt.show()
+	plt.plot(np.log(kh), pk[0])
+	plt.title('pk at z = 0 vs log(kh)')
+	plt.xlabel('log(kh)')
+	plt.ylabel('pk')
+	plt.show()
 
-plt.plot(kh, np.log(pk[0]))
-plt.xlabel("log(kh)")
-plt.ylabel("log(pk)")
-plt.title('log(pk) at z = 0')
-plt.show()
+	plt.plot(kh, np.log(pk[0]))
+	plt.xlabel("log(kh)")
+	plt.ylabel("log(pk)")
+	plt.title('log(pk) at z = 0')
+	plt.show()
 
-dlogkh = np.gradient(kh)
-vector_want = 1 / (2 * math.pi**2 ) * (kh**2 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * dlogkh
-#Sigma_8^2
-print("My sigma: ", (np.sum(vector_want)))
+	dlogkh = np.gradient(kh)
+	vector_want = 1 / (2 * math.pi**2 ) * (kh**2 * pk[0] * ((3 * special.spherical_jn(1, 8*kh)) / (8 * kh))**2) * dlogkh
+	#Sigma_8^2
+	print("My sigma: ", (np.sum(vector_want)))
 
-plt.plot(kh, np.log(kh**3 * pk[0] * np.exp(-kh**2)))
-plt.xlabel("log(kh)")
-plt.ylabel("log(kh**3 * pk * exp)")
-plt.title('log(kh**3 * pk * exp) at z=0')
-plt.show()
+	plt.plot(kh, np.log(kh**3 * pk[0] * np.exp(-kh**2)))
+	plt.xlabel("log(kh)")
+	plt.ylabel("log(kh**3 * pk * exp)")
+	plt.title('log(kh**3 * pk * exp) at z=0')
+	plt.show()
 
-#This should be the integral that you put in our paper, Zack
-r = [i for i in range(300)]
+	#This should be the integral that you put in our paper, Zack
+	r = np.arange(1,300)
+	dlogkh = kh[1] - kh[0]
+	xi_1_paper = [i for i in range(1, 300)]
+	for i in range(len(r)):
+		xi_1_paper[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * kh**3 * special.spherical_jn(0, kh * r[i]) * pk[0]) * dlogkh 
+
+	plt.plot(r, xi_1_paper)
+	plt.xlabel("r")
+	plt.ylabel("r[i]**2 * xi")
+	plt.title('r[i]**2 * xi vs r')
+	plt.show()
+
+
+	#Below is attempting to find derivatives with formula form paper
+	dxi_1_paper = [i for i in range(1, 300)]
+	for i in range(len(r)):
+		dxi_1_paper[i] = -r[i] * np.sum((kh**3 * dlogkh) / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r[i]) * pk[0] * np.exp(-kh**2))
+
+
+	spl = Spline(r[1:], xi_1_paper[1:] / r[1:]**2.)
+
+	x = spl(r * 1.001)
+	y = spl(r * 0.999)
+
+	dxi_1 = (x - y) / 0.002
+	plt.figure()
+	plt.plot(r, dxi_1_paper, '-g', label='paper')
+	plt.plot(r, dxi_1, label='numerically')
+	plt.xlabel("r")
+	plt.ylabel("dxi")
+	plt.title('dxi / d(alpha)|alpha = 1 {from paper}')
+	plt.legend()
+	plt.show()
+
+	plt.plot(r, dxi_1)
+	plt.title('dxi_1')
+	plt.show()
+
+'''
+Below is the block of code that will be used to get xi_1
+All of these are derived in our paper
+'''
+r = np.linspace(1., 300., 102)
+xi_1 = np.zeros(len(r))
+dxi_1 = np.zeros(len(r))
 dlogkh = kh[1] - kh[0]
-xi_1_paper = [i for i in range(300)]
-for i in range(len(r)):
-	xi_1_paper[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * kh**3 * special.spherical_jn(0, kh * r[i]) * pk[0]) * dlogkh 
 
-plt.plot(r, xi_1_paper)
+#I have a question about below equation. Zack said that I need to replace every dkh with with kh dlog(kh)
+#Before I had kh**3 which was different than what the paper had, but I think it was correcting for the dlog(kh)
+#I changed it back to kh**2, pulled the dlog(kh) outside the sum, and left the k resulting in u-sub in the sum (at the end)
+for i in range(len(r)):
+	xi_1[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * kh**2 * special.spherical_jn(0, kh * r[i]) * pk[0] * kh) * dlogkh
+
+plt.plot(r, xi_1)
 plt.xlabel("r")
 plt.ylabel("r[i]**2 * xi")
 plt.title('r[i]**2 * xi vs r')
 plt.show()
 
+i = 0
+for r_val in r:
+	dxi_1[i] = -r[i] * np.sum((kh**3 * dlogkh) / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r_val) * pk[0] * np.exp(-kh**2))
+	i += 1
 
-#Below is attempting to find derivatives with formula form paper
-dxi_1_paper = [i for i in range(300)]
+xi_1_recovered = np.zeros(len(r))
 for i in range(len(r)):
-	dxi_1_paper[i] = -r[i] * np.sum((kh**2 * dlogkh) / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r[i]) * pk[0]) 
+	xi_1_recovered[i] = r[i]**2 * np.sum(dxi_1[0:i])
 
-plt.plot(r, dxi_1_paper)
+plt.plot(r, xi_1_recovered)
 plt.xlabel("r")
-plt.ylabel("dxi")
-plt.title('dxi / d(alpha)|alpha = 1 {from paper}')
+plt.ylabel("r[i]**2 * xi_1_recovered")
+plt.title('r[i]**2 * xi_1_recovered vs r')
 plt.show()
+
+'''
+#I'm not sure what this code is doing/ trying to do
+def sigma_R_integrand(R, k):
+	kr = k * R
+	bess = (3. * special.spherical_jn(1, kr))/kr
+	return k * k * bess * bess * pk_spline(k)
+t0 = time.time()
+sig = ((1./(2. * np.pi * np.pi)) * scipy.integrate.quad(lambda k: sigma_R_integrand(0.6, k), 0, np.inf,epsabs=1e2,epsrel=1e2)[0])**0.5
+print('quad',time.time()-t0)
+'''
 
 
 '''
-I think something is wrong with what this produces
+#I think something is wrong with what this produces
 #This function should give us xi_1, the templates corresponding to linear bias
 r, xi_1 = P2xi(kh)(pk[0])
 print(xi_1)
 print(r.shape)
 #print("XI: ", xi_1.shape)
 
-plt.plot(r, xi_1)
+plt.plot(r[1:], xi_1[1:])
 plt.xlabel("r")
 plt.ylabel("xi_1")
 plt.show()
-'''
 
-'''
 #I think something wrong is happening with this function
 r, xi_1 = P2xi(kh)(pk[0])
 print(xi_1)
