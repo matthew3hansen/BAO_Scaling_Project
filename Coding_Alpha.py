@@ -17,6 +17,7 @@ from matplotlib import pyplot as plt
 import CAMB_General_Code 
 from mcfit import P2xi
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline
+from fastpt import *
 
 
 #I don't know how the data vector will look in the end, but right now I'm thinking that it can be a list where each index represents a 
@@ -492,11 +493,11 @@ dlogkh = kh[1] - kh[0]
 for i in range(len(r)):
 	xi_1[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * kh**2 * special.spherical_jn(0, kh * r[i]) * pk[0] * kh) * dlogkh
 
-plt.plot(r, xi_1)
+'''plt.plot(r, xi_1)
 plt.xlabel("r")
 plt.ylabel("r[i]**2 * xi")
 plt.title('r[i]**2 * xi vs r')
-plt.show()
+plt.show()'''
 
 
 i = 0
@@ -504,21 +505,41 @@ for r_val in r:
 	dxi_1[i] = -r[i] * np.sum(kh**2  / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r_val) * pk[0] * np.exp(-kh**2) * kh) * dlogkh
 	i += 1
 
-plt.plot(r, dxi_1)
+'''plt.plot(r, dxi_1)
 plt.xlabel("r")
 plt.ylabel("dxi_1")
 plt.title('dxi_1 vs r')
-plt.show()
+plt.show()'''
 
-
+#I'm having a hard time trying to recover xi, its not really working out
 xi_1_recovered = np.zeros(len(r))
 for i in range(len(r)):
 	xi_1_recovered[i] = (r[-1] - r[0]) / len(r) * np.sum(dxi_1[0:i])
 
-plt.plot(r, xi_1_recovered)
+'''plt.plot(r, xi_1_recovered)
 plt.xlabel("r")
 plt.ylabel("xi_1_recovered")
 plt.title('xi_1_recovered vs r')
+plt.show();'''
+
+plt.plot(kh, pk[0])
+plt.xlabel("kh")
+plt.ylabel("pk")
+plt.title('pk vs kh')
+plt.show()
+
+nu=-2
+n_pad = len(kh)
+fastpt_ = FASTPT_simple.FASTPT(kh, nu, n_pad=n_pad)
+list_1 = fastpt_.P_bias(pk)
+pk_lin = list_1[0]
+'''pk_spt = fastpt_.one_loop(pk)
+pk = pk + pk_spt'''
+
+plt.plot(kh, pk_lin)
+plt.xlabel("kh")
+plt.ylabel("pk")
+plt.title('pk vs kh')
 plt.show()
 
 '''
