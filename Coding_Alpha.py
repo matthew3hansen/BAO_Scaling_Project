@@ -528,61 +528,210 @@ plt.ylabel("pk")
 plt.title('pk vs kh')
 plt.show()
 
-nu=-2
-n_pad = len(kh)
-fastpt_ = FASTPT_simple.FASTPT(kh, nu, n_pad=n_pad)
-list_1 = fastpt_.P_bias(pk)
-pk_lin = list_1[0]
-'''pk_spt = fastpt_.one_loop(pk)
-pk = pk + pk_spt'''
+'''
+I forget exactly where this code is from, but it reproduces the correct graph now.
+This section gives P(k)_linear and [P_{22} + P_{13}]
+'''
+from time import time
 
-plt.plot(kh, pk_lin)
-plt.xlabel("kh")
-plt.ylabel("pk")
-plt.title('pk vs kh')
+import fastpt as fpt
+from fastpt import FASTPT
+
+#Version check
+print('This is FAST-PT version', fpt.__version__)
+
+# load the data file
+d=np.loadtxt('Pk_test.dat')
+# declare k and the power spectrum
+k=d[:,0]; P=d[:,1]
+
+# set the parameters for the power spectrum window and
+# Fourier coefficient window
+#P_window=np.array([.2,.2])
+C_window=.75
+#document this better in the user manual
+
+# padding length
+n_pad=int(0.5*len(k))
+to_do=['all']
+
+# initialize the FASTPT class
+# including extrapolation to higher and lower k
+# time the operation
+t1 = time()
+fpt = FASTPT(k,to_do=to_do,low_extrap=-5,high_extrap=3,n_pad=n_pad)
+t2 = time()
+
+# calculate 1loop SPT (and time the operation)
+P_spt = fpt.one_loop_dd(P,C_window=C_window)
+
+t3=time()
+print('initialization time for', to_do, "%10.3f" %(t2-t1), 's')
+print('one_loop_dd recurring time', "%10.3f" %(t3-t2), 's')
+
+#calculate tidal torque EE and BB P(k)
+P_IA_tt=fpt.IA_tt(P,C_window=C_window)
+P_IA_ta=fpt.IA_ta(P,C_window=C_window)
+P_IA_mix=fpt.IA_mix(P,C_window=C_window)
+P_RSD=fpt.RSD_components(P,1.0,C_window=C_window)
+P_kPol=fpt.kPol(P,C_window=C_window)
+P_OV=fpt.OV(P,C_window=C_window)
+sig4=fpt.sig4
+
+# make a plot of 1loop SPT results
+
+ax=plt.subplot(111)
+ax.set_xscale('log')
+ax.set_yscale('log')
+ax.set_ylabel(r'$P(k)$', size=30)
+ax.set_xlabel(r'$k$', size=30)
+
+ax.plot(k,P,label='linear')
+ax.plot(k,P_spt[0], label=r'$P_{22}(k) + P_{13}(k)$' )
+#ax.plot(k,P_IA_mix[0])
+#ax.plot(k,-1*P_IA_mix[0],'--')
+#ax.plot(k,P_IA_mix[1])
+#ax.plot(k,-1*P_IA_mix[1],'--')
+
+plt.legend(loc=3)
+plt.grid()
 plt.show()
 
 '''
-#I'm not sure what this code is doing/ trying to do
-def sigma_R_integrand(R, k):
-	kr = k * R
-	bess = (3. * special.spherical_jn(1, kr))/kr
-	return k * k * bess * bess * pk_spline(k)
-t0 = time.time()
-sig = ((1./(2. * np.pi * np.pi)) * scipy.integrate.quad(lambda k: sigma_R_integrand(0.6, k), 0, np.inf,epsabs=1e2,epsrel=1e2)[0])**0.5
-print('quad',time.time()-t0)
+The beloe graph is from fastpt-examples.
+It produces the correct graphs.
+This function gives P_{d1d1}, P_{gg}, and P_{mg}
 '''
+# import fastpt
+import fastpt.HT as HT
 
+# import the Core Cosmology Library (CCL) if you have it
+try:
+    import pyccl as ccl
+    have_ccl = True
+except:
+    have_ccl = False
+    print('CCL not found. Steps with CCL will be skipped.')
 
-'''
-#I think something is wrong with what this produces
-#This function should give us xi_1, the templates corresponding to linear bias
-r, xi_1 = P2xi(kh)(pk[0])
-print(xi_1)
-print(r.shape)
-#print("XI: ", xi_1.shape)
+# If you want to test HT against external Bessel transform code, e.g. mcfit
+try:
+    from mcfit import P2xi
+    have_mcfit = True
+except:
+    have_mcfit = False
+    print('mcfit not found. Steps with mcfit will be skipped.')
 
-plt.plot(r[1:], xi_1[1:])
-plt.xlabel("r")
-plt.ylabel("xi_1")
+## Get from CCL (which runs CLASS by default)
+if have_ccl:
+    # set two cosmologies
+    cosmo = ccl.Cosmology(Omega_c=0.27, Omega_b=0.045, h=0.67, A_s=2.1e-9, n_s=0.96)
+    cosmo2 = ccl.Cosmology(Omega_c=0.30, Omega_b=0.045, h=0.67, A_s=2.0e-9, n_s=0.96)
+
+    # Get the linear power spectrum at z=0 for our given cosmologies
+    # k array to be used for power spectra
+    nk = 512
+    log10kmin = -5
+    log10kmax = 2
+    ks = np.logspace(log10kmin,log10kmax,nk)
+    pk_lin_z0 = ccl.linear_matter_power(cosmo,ks,1)
+    pk_lin_z0_2 = ccl.linear_matter_power(cosmo2,ks,1)
+
+## Or get from pre-computed CAMB run
+# This file is in the same examples/ folder
+d = np.loadtxt('Pk_test.dat')
+k = d[:, 0]
+pk = d[:, 1]
+p22 = d[:, 2]
+p13 = d[:, 3]
+
+if not have_ccl:
+    ks = k
+    pk_lin_z0 = pk
+    pk_lin_z0_2 = None
+    
+## Or get from your preferred Boltzmann code
+
+# Note: k needs to be evenly log spaced. FAST-PT will raise an error if it's not.
+# We have an issue to add automatic interpolation, but this is not yet implemented.
+
+# Evaluation time scales as roughly N*logN. Tradeoff between time and accuracy in choosing k resolution.
+# Currently, k sampling must be done outside of FAST-PT. This feature will also be added.
+
+# Set FAST-PT settings.
+
+# the to_do list sets the k-grid quantities needed in initialization (e.g. the relevant gamma functions)
+to_do = ['one_loop_dd', 'dd_bias', 'one_loop_cleft_dd', 'IA_all', 'OV', 'kPol', 'RSD', 'IRres']
+
+pad_factor = 1 # padding the edges with zeros before Pk repeats
+n_pad = pad_factor*len(ks)
+low_extrap = -5 # Extend Plin to this log10 value if necessary (power law)
+high_extrap = 3 # Extend Plin to this log10 value if necessary (power law)
+P_window = None # Smooth the input power spectrum edges (typically not needed, especially with zero padding)
+C_window = .75 # Smooth the Fourier coefficients of Plin to remove high-frequency noise.
+
+# FAST-PT will parse the full to-do list and only calculate each needed quantity once.
+# Ideally, the initialization happens once per likelihood evaluation, or even once per chain.
+
+fpt_obj = fpt.FASTPT(ks,to_do=to_do,low_extrap=low_extrap,high_extrap=high_extrap,n_pad=n_pad)
+
+#fpt_obj_temp = fpt.FASTPT(k,to_do=to_do,low_extrap=low_extrap,high_extrap=high_extrap,n_pad=n_pad)
+
+# For PT, we need to multiply by the relevant powers of the growth factor.
+# For simplicity, we will do this all at z=0, where growth = 1. But we will keep the factors explicit.
+growth = 1.0
+g2 = growth**2
+g4 = growth**4
+
+## If you have CCL, you could use that here for growth at any redshift.
+if have_ccl:
+    z = 0.0
+    gz = ccl.growth_factor(cosmo,1./(1+z))
+    g2 = gz**2
+    g4 = gz**4
+
+P_bias_E = fpt_obj.one_loop_dd_bias_b3nl(pk_lin_z0,C_window=C_window)
+
+# Output individual terms
+Pd1d1 = g2 * pk_lin_z0 + g4 * P_bias_E[0] # could use halofit or emulator instead of 1-loop SPT
+Pd1d2 = g4 * P_bias_E[2]
+Pd2d2 = g4 * P_bias_E[3]
+Pd1s2 = g4 * P_bias_E[4]
+Pd2s2 = g4 * P_bias_E[5]
+Ps2s2 = g4 * P_bias_E[6]
+Pd1p3 = g4 * P_bias_E[8]
+s4 =  g4 * P_bias_E[7] # sigma^4 which determines the (non-physical) low-k contributions
+
+# set bias parameters
+b11=b12=1.0
+b21=b22=1.0
+bs1=bs2=1.0
+b3nl1=b3nl2=1.0
+
+# Combine for P_gg or P_mg
+P_gg = ((b11*b12) * Pd1d1 +
+        0.5*(b11*b22 + b12*b21) * Pd1d2 +
+        0.25*(b21*b22) * (Pd2d2 - 2.*s4) +
+        0.5*(b11*bs2 + b12*bs1) * Pd1s2 +
+        0.25*(b21*bs2 + b22*bs1) * (Pd2s2 - (4./3.)*s4) +
+        0.25*(bs1*bs2) * (Ps2s2 - (8./9.)*s4) +
+        0.5*(b11 * b3nl2 + b12 * b3nl1) * Pd1p3)
+
+P_mg = (b11 * Pd1d1 +
+        0.5*b21 * Pd1d2 +
+        0.5*bs1 * Pd1s2 +
+        0.5*b3nl1 * Pd1p3)
+
+# Plot
+plt.plot(ks,Pd1d1, 'k', label='$P_{d1d1}(k)$')
+plt.plot(ks,P_gg, 'r', label='$P_{gg}(k)$')
+plt.plot(ks,abs(P_gg), 'r--')
+plt.plot(ks,P_mg, 'b', label='$P_{mg}(k)$')
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel('$k$', fontsize=14)
+plt.ylabel('$P(k)$', fontsize=14)
+plt.xlim(1e-3,1e1)
+plt.ylim(1e2,1.1e5)
+plt.legend(loc='lower left', fontsize=12, frameon=False)
 plt.show()
-
-#I think something wrong is happening with this function
-r, xi_1 = P2xi(kh)(pk[0])
-print(xi_1)
-print(r.shape)
-#Alex said that spline will allow us to interpolate the data to then take the derivative, numerically
-spl = Spline(r, xi_1)
-
-x = spl(r * 1.1)
-y = spl(r * 0.9)
-
-xi_1_prime = (x - y) / 0.2
-
-plt.plot(r, xi_1)
-plt.xlabel("r")
-plt.ylabel("xi_1_prime")
-plt.show()
-
-xi_1_dprime = (x + y - 2*xi_1) / 0.1**2
-'''
