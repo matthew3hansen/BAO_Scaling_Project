@@ -478,55 +478,55 @@ def old_graphs():
 	plt.title('dxi_1')
 	plt.show()
 
-'''
-Below is the block of code that will be used to get xi_1
-All of these are derived in our paper
-'''
-r = np.linspace(1., 300., 102)
-xi_1 = np.zeros(len(r))
-dxi_1 = np.zeros(len(r))
-dlogkh = kh[1] - kh[0]
+	'''
+	Below is the block of code that will be used to get xi_1
+	All of these are derived in our paper
+	'''
+	r = np.linspace(1., 300., 102)
+	xi_1 = np.zeros(len(r))
+	dxi_1 = np.zeros(len(r))
+	dlogkh = kh[1] - kh[0]
 
-#I have a question about below equation. Zack said that I need to replace every dkh with with kh dlog(kh)
-#Before I had kh**3 which was different than what the paper had, but I think it was correcting for the dlog(kh)
-#I changed it back to kh**2, pulled the dlog(kh) outside the sum, and left the k resulting in u-sub in the sum (at the end)
-for i in range(len(r)):
-	xi_1[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * kh**2 * special.spherical_jn(0, kh * r[i]) * pk[0] * kh) * dlogkh
+	#I have a question about below equation. Zack said that I need to replace every dkh with with kh dlog(kh)
+	#Before I had kh**3 which was different than what the paper had, but I think it was correcting for the dlog(kh)
+	#I changed it back to kh**2, pulled the dlog(kh) outside the sum, and left the k resulting in u-sub in the sum (at the end)
+	for i in range(len(r)):
+		xi_1[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * kh**2 * special.spherical_jn(0, kh * r[i]) * pk[0] * kh) * dlogkh
 
-'''plt.plot(r, xi_1)
-plt.xlabel("r")
-plt.ylabel("r[i]**2 * xi")
-plt.title('r[i]**2 * xi vs r')
-plt.show()'''
+	'''plt.plot(r, xi_1)
+	plt.xlabel("r")
+	plt.ylabel("r[i]**2 * xi")
+	plt.title('r[i]**2 * xi vs r')
+	plt.show()'''
 
 
-i = 0
-for r_val in r:
-	dxi_1[i] = -r[i] * np.sum(kh**2  / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r_val) * pk[0] * np.exp(-kh**2) * kh) * dlogkh
-	i += 1
+	i = 0
+	for r_val in r:
+		dxi_1[i] = -r[i] * np.sum(kh**2  / (2 * math.pi**2) * kh * special.spherical_jn(1, kh * r_val) * pk[0] * np.exp(-kh**2) * kh) * dlogkh
+		i += 1
 
-'''plt.plot(r, dxi_1)
-plt.xlabel("r")
-plt.ylabel("dxi_1")
-plt.title('dxi_1 vs r')
-plt.show()'''
+	'''plt.plot(r, dxi_1)
+	plt.xlabel("r")
+	plt.ylabel("dxi_1")
+	plt.title('dxi_1 vs r')
+	plt.show()'''
 
-#I'm having a hard time trying to recover xi, its not really working out
-xi_1_recovered = np.zeros(len(r))
-for i in range(len(r)):
-	xi_1_recovered[i] = (r[-1] - r[0]) / len(r) * np.sum(dxi_1[0:i])
+	#I'm having a hard time trying to recover xi, its not really working out
+	xi_1_recovered = np.zeros(len(r))
+	for i in range(len(r)):
+		xi_1_recovered[i] = (r[-1] - r[0]) / len(r) * np.sum(dxi_1[0:i])
 
-'''plt.plot(r, xi_1_recovered)
-plt.xlabel("r")
-plt.ylabel("xi_1_recovered")
-plt.title('xi_1_recovered vs r')
-plt.show();'''
+	'''plt.plot(r, xi_1_recovered)
+	plt.xlabel("r")
+	plt.ylabel("xi_1_recovered")
+	plt.title('xi_1_recovered vs r')
+	plt.show();'''
 
-plt.plot(kh, pk[0])
-plt.xlabel("kh")
-plt.ylabel("pk")
-plt.title('pk vs kh')
-plt.show()
+	plt.plot(kh, pk[0])
+	plt.xlabel("kh")
+	plt.ylabel("pk")
+	plt.title('pk vs kh')
+	plt.show()
 
 '''
 I forget exactly where this code is from, but it reproduces the correct graph now.
@@ -579,7 +579,7 @@ P_OV=fpt.OV(P,C_window=C_window)
 sig4=fpt.sig4
 
 # make a plot of 1loop SPT results
-
+'''
 ax=plt.subplot(111)
 ax.set_xscale('log')
 ax.set_yscale('log')
@@ -596,13 +596,13 @@ ax.plot(k,P_spt[0], label=r'$P_{22}(k) + P_{13}(k)$' )
 plt.legend(loc=3)
 plt.grid()
 plt.show()
-
+'''
 '''
 The beloe graph is from fastpt-examples.
 It produces the correct graphs.
 This function gives P_{d1d1}, P_{gg}, and P_{mg}
 '''
-# import fastpt
+import fastpt
 import fastpt.HT as HT
 
 # import the Core Cosmology Library (CCL) if you have it
@@ -672,7 +672,7 @@ C_window = .75 # Smooth the Fourier coefficients of Plin to remove high-frequenc
 # FAST-PT will parse the full to-do list and only calculate each needed quantity once.
 # Ideally, the initialization happens once per likelihood evaluation, or even once per chain.
 
-fpt_obj = fpt.FASTPT(ks,to_do=to_do,low_extrap=low_extrap,high_extrap=high_extrap,n_pad=n_pad)
+fpt_obj = FASTPT(ks,to_do=to_do,low_extrap=low_extrap,high_extrap=high_extrap,n_pad=n_pad)
 
 #fpt_obj_temp = fpt.FASTPT(k,to_do=to_do,low_extrap=low_extrap,high_extrap=high_extrap,n_pad=n_pad)
 
@@ -707,21 +707,32 @@ b21=b22=1.0
 bs1=bs2=1.0
 b3nl1=b3nl2=1.0
 
+P_IRres = fpt_obj.IRres(pk_lin_z0,C_window=C_window)
+# Note that this function needs documentation/validation
+
+r,xi_IRres = HT.k_to_r(ks,P_IRres,1.5,-1.5,.5, (2.*np.pi)**(-1.5))
+
+
 # Combine for P_gg or P_mg
-P_gg = ((b11*b12) * Pd1d1 +
+noise = np.random.normal(0, 5, 3000)
+
+P_gg = ((b11*b12) * P_IRres +
         0.5*(b11*b22 + b12*b21) * Pd1d2 +
         0.25*(b21*b22) * (Pd2d2 - 2.*s4) +
         0.5*(b11*bs2 + b12*bs1) * Pd1s2 +
         0.25*(b21*bs2 + b22*bs1) * (Pd2s2 - (4./3.)*s4) +
         0.25*(bs1*bs2) * (Ps2s2 - (8./9.)*s4) +
-        0.5*(b11 * b3nl2 + b12 * b3nl1) * Pd1p3)
+        0.5*(b11 * b3nl2 + b12 * b3nl1) * Pd1p3) + noise * ks
+
+noise = np.random.normal(0, 5, 3000)
 
 P_mg = (b11 * Pd1d1 +
         0.5*b21 * Pd1d2 +
         0.5*bs1 * Pd1s2 +
-        0.5*b3nl1 * Pd1p3)
+        0.5*b3nl1 * Pd1p3) + noise * ks
 
 # Plot
+'''
 plt.plot(ks,Pd1d1, 'k', label='$P_{d1d1}(k)$')
 plt.plot(ks,P_gg, 'r', label='$P_{gg}(k)$')
 plt.plot(ks,abs(P_gg), 'r--')
@@ -734,4 +745,80 @@ plt.ylabel('$P(k)$', fontsize=14)
 plt.xlim(1e-3,1e1)
 plt.ylim(1e2,1.1e5)
 plt.legend(loc='lower left', fontsize=12, frameon=False)
+plt.show()'''
+
+
+#Calculating the CF
+r = np.linspace(1., 300., 3000)
+xi_gg_weighted = np.zeros(len(r))
+xi_mg_weighted = np.zeros(len(r))
+xi_lin_weighted = np.zeros(len(r))
+dlogks = ks[1] - ks[0]
+
+#I have a question about below equation. Zack said that I need to replace every dkh with with kh dlog(kh)
+#Before I had kh**3 which was different than what the paper had, but I think it was correcting for the dlog(kh)
+#I changed it back to kh**2, pulled the dlog(kh) outside the sum, and left the k resulting in u-sub in the sum (at the end)
+for i in range(len(r)):
+	xi_gg_weighted[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * P_gg * ks) * dlogks
+	xi_mg_weighted[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * P_mg * ks) * dlogks
+	xi_lin_weighted[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * pk_lin_z0 * ks) * dlogks
+
+#Below are the two graphs that I put in the first draft of the paper
+#I added xi_mg just to see what it looked like
+plt.plot(r, xi_gg_weighted, label=r"$\xi_{\rm gg}$")
+plt.plot(r, xi_mg_weighted, label=r"$\xi_{\rm mg}$")
+plt.plot(r, xi_lin_weighted, color="black", label=r"$\xi_{\rm lin}$")
+plt.ylim(0, 0.0075)
+plt.xlim(0,130)
+plt.ylabel(r'$r^2 \xi (r)$')
+plt.xlabel(r'$r [\rm Mpc]$')
+plt.title("Weighted Galaxy Correlation Function Model")
+plt.legend()
 plt.show()
+
+xi_lim_1 = np.zeros(len(r))
+xi_lim_9 = np.zeros(len(r))
+xi_lim_11 = np.zeros(len(r))
+
+for i in range(len(r)):
+	xi_lim_1[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * pk_lin_z0 * ks) * dlogks
+	xi_lim_9[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, 0.9 * ks * r[i]) * np.exp(-ks**2) * pk_lin_z0 * ks) * dlogks
+	xi_lim_11[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, 1.1 * ks * r[i]) * np.exp(-ks**2) * pk_lin_z0 * ks) * dlogks
+	
+plt.plot(r, xi_lim_1, color="black", label=r"$\alpha = 1$")
+plt.plot(r, xi_lim_9, color="red", label=r"$\alpha = 0.9$")
+plt.plot(r, xi_lim_11, color="orange", label=r"$\alpha = 1.1$")
+plt.ylim(0, 0.005)
+plt.xlim(0, 150)
+plt.ylabel(r'$r^2 \xi (r)$')
+plt.xlabel(r'$r [\rm Mpc]$')
+plt.title("Different Scaling Galaxy Correlation Function Model")
+plt.legend()
+plt.show()
+
+'''
+Ps, diag gaussian in FS. K mode is independent in FS, cannot be true in real space. Add noise in k space, then FT in real space
+Add noise to P_gg of gaussian times K, and plug in shot noise
+'''
+
+'''
+P_IRres = fpt_obj.IRres(pk_lin_z0,C_window=C_window)
+# Note that this function needs documentation/validation
+
+r,xi_IRres = HT.k_to_r(ks,P_IRres,1.5,-1.5,.5, (2.*np.pi)**(-1.5))
+
+# Plot
+plt.plot(r,r**2 * xi, 'g--', label=r'$\xi(k)$ cosmo 1, lin')
+plt.plot(r,r**2 * xi_IRres, 'b', label=r'$\xi(k)$ cosmo 1, IR res')
+plt.plot(r,r**2 * xi_1loop, 'r--', label=r'$\xi(k)$ cosmo 1, 1-loop')
+
+
+plt.xlabel('$r$', fontsize=14)
+plt.ylabel(r'$\xi$', fontsize=14)
+if have_ccl:
+    plt.xlim(5e1,2e2)
+else:
+    plt.xlim(0,1.5e2)
+plt.ylim(0, 50)
+plt.legend(loc='lower left', fontsize=12, frameon=False)
+'''
