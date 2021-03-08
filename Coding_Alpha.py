@@ -15,6 +15,7 @@ import sys, platform, os
 import matplotlib
 from matplotlib import pyplot as plt
 import CAMB_General_Code 
+import j0j0
 from mcfit import P2xi
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline
 from fastpt import *
@@ -528,75 +529,75 @@ def old_graphs():
 	plt.title('pk vs kh')
 	plt.show()
 
-'''
-I forget exactly where this code is from, but it reproduces the correct graph now.
-This section gives P(k)_linear and [P_{22} + P_{13}]
-'''
-from time import time
+	'''
+	I forget exactly where this code is from, but it reproduces the correct graph now.
+	This section gives P(k)_linear and [P_{22} + P_{13}]
+	'''
+	from time import time
 
-import fastpt as fpt
-from fastpt import FASTPT
+	import fastpt as fpt
+	from fastpt import FASTPT
 
-#Version check
-print('This is FAST-PT version', fpt.__version__)
+	#Version check
+	print('This is FAST-PT version', fpt.__version__)
 
-# load the data file
-d=np.loadtxt('Pk_test.dat')
-# declare k and the power spectrum
-k=d[:,0]; P=d[:,1]
+	# load the data file
+	d=np.loadtxt('Pk_test.dat')
+	# declare k and the power spectrum
+	k=d[:,0]; P=d[:,1]
 
-# set the parameters for the power spectrum window and
-# Fourier coefficient window
-#P_window=np.array([.2,.2])
-C_window=.75
-#document this better in the user manual
+	# set the parameters for the power spectrum window and
+	# Fourier coefficient window
+	#P_window=np.array([.2,.2])
+	C_window=.75
+	#document this better in the user manual
 
-# padding length
-n_pad=int(0.5*len(k))
-to_do=['all']
+	# padding length
+	n_pad=int(0.5*len(k))
+	to_do=['all']
 
-# initialize the FASTPT class
-# including extrapolation to higher and lower k
-# time the operation
-t1 = time()
-fpt = FASTPT(k,to_do=to_do,low_extrap=-5,high_extrap=3,n_pad=n_pad)
-t2 = time()
+	# initialize the FASTPT class
+	# including extrapolation to higher and lower k
+	# time the operation
+	t1 = time()
+	fpt = FASTPT(k,to_do=to_do,low_extrap=-5,high_extrap=3,n_pad=n_pad)
+	t2 = time()
 
-# calculate 1loop SPT (and time the operation)
-P_spt = fpt.one_loop_dd(P,C_window=C_window)
+	# calculate 1loop SPT (and time the operation)
+	P_spt = fpt.one_loop_dd(P,C_window=C_window)
 
-t3=time()
-print('initialization time for', to_do, "%10.3f" %(t2-t1), 's')
-print('one_loop_dd recurring time', "%10.3f" %(t3-t2), 's')
+	t3=time()
+	print('initialization time for', to_do, "%10.3f" %(t2-t1), 's')
+	print('one_loop_dd recurring time', "%10.3f" %(t3-t2), 's')
 
-#calculate tidal torque EE and BB P(k)
-P_IA_tt=fpt.IA_tt(P,C_window=C_window)
-P_IA_ta=fpt.IA_ta(P,C_window=C_window)
-P_IA_mix=fpt.IA_mix(P,C_window=C_window)
-P_RSD=fpt.RSD_components(P,1.0,C_window=C_window)
-P_kPol=fpt.kPol(P,C_window=C_window)
-P_OV=fpt.OV(P,C_window=C_window)
-sig4=fpt.sig4
+	#calculate tidal torque EE and BB P(k)
+	P_IA_tt=fpt.IA_tt(P,C_window=C_window)
+	P_IA_ta=fpt.IA_ta(P,C_window=C_window)
+	P_IA_mix=fpt.IA_mix(P,C_window=C_window)
+	P_RSD=fpt.RSD_components(P,1.0,C_window=C_window)
+	P_kPol=fpt.kPol(P,C_window=C_window)
+	P_OV=fpt.OV(P,C_window=C_window)
+	sig4=fpt.sig4
 
-# make a plot of 1loop SPT results
-'''
-ax=plt.subplot(111)
-ax.set_xscale('log')
-ax.set_yscale('log')
-ax.set_ylabel(r'$P(k)$', size=30)
-ax.set_xlabel(r'$k$', size=30)
+	# make a plot of 1loop SPT results
+	ax=plt.subplot(111)
+	ax.set_xscale('log')
+	ax.set_yscale('log')
+	ax.set_ylabel(r'$P(k)$', size=30)
+	ax.set_xlabel(r'$k$', size=30)
 
-ax.plot(k,P,label='linear')
-ax.plot(k,P_spt[0], label=r'$P_{22}(k) + P_{13}(k)$' )
-#ax.plot(k,P_IA_mix[0])
-#ax.plot(k,-1*P_IA_mix[0],'--')
-#ax.plot(k,P_IA_mix[1])
-#ax.plot(k,-1*P_IA_mix[1],'--')
+	ax.plot(k,P,label='linear')
+	ax.plot(k,P_spt[0], label=r'$P_{22}(k) + P_{13}(k)$' )
+	#ax.plot(k,P_IA_mix[0])
+	#ax.plot(k,-1*P_IA_mix[0],'--')
+	#ax.plot(k,P_IA_mix[1])
+	#ax.plot(k,-1*P_IA_mix[1],'--')
 
-plt.legend(loc=3)
-plt.grid()
-plt.show()
-'''
+	plt.legend(loc=3)
+	plt.grid()
+	plt.show()
+
+
 '''
 The beloe graph is from fastpt-examples.
 It produces the correct graphs.
@@ -714,44 +715,23 @@ r,xi_IRres = HT.k_to_r(ks,P_IRres,1.5,-1.5,.5, (2.*np.pi)**(-1.5))
 
 
 # Combine for P_gg or P_mg
-noise = np.random.normal(0, 5, 3000)
-
 P_gg = ((b11*b12) * P_IRres +
         0.5*(b11*b22 + b12*b21) * Pd1d2 +
         0.25*(b21*b22) * (Pd2d2 - 2.*s4) +
         0.5*(b11*bs2 + b12*bs1) * Pd1s2 +
         0.25*(b21*bs2 + b22*bs1) * (Pd2s2 - (4./3.)*s4) +
         0.25*(bs1*bs2) * (Ps2s2 - (8./9.)*s4) +
-        0.5*(b11 * b3nl2 + b12 * b3nl1) * Pd1p3) + noise * ks
-
-noise = np.random.normal(0, 5, 3000)
+        0.5*(b11 * b3nl2 + b12 * b3nl1) * Pd1p3)
 
 P_mg = (b11 * Pd1d1 +
         0.5*b21 * Pd1d2 +
         0.5*bs1 * Pd1s2 +
-        0.5*b3nl1 * Pd1p3) + noise * ks
-
-# Plot
-'''
-plt.plot(ks,Pd1d1, 'k', label='$P_{d1d1}(k)$')
-plt.plot(ks,P_gg, 'r', label='$P_{gg}(k)$')
-plt.plot(ks,abs(P_gg), 'r--')
-plt.plot(ks,P_mg, 'b', label='$P_{mg}(k)$')
-
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('$k$', fontsize=14)
-plt.ylabel('$P(k)$', fontsize=14)
-plt.xlim(1e-3,1e1)
-plt.ylim(1e2,1.1e5)
-plt.legend(loc='lower left', fontsize=12, frameon=False)
-plt.show()'''
-
+        0.5*b3nl1 * Pd1p3)
 
 #Calculating the CF
 r = np.linspace(1., 300., 3000)
+xi_gg = np.zeros(len(r))
 xi_gg_weighted = np.zeros(len(r))
-xi_mg_weighted = np.zeros(len(r))
 xi_lin_weighted = np.zeros(len(r))
 dlogks = ks[1] - ks[0]
 
@@ -759,14 +739,13 @@ dlogks = ks[1] - ks[0]
 #Before I had kh**3 which was different than what the paper had, but I think it was correcting for the dlog(kh)
 #I changed it back to kh**2, pulled the dlog(kh) outside the sum, and left the k resulting in u-sub in the sum (at the end)
 for i in range(len(r)):
-	xi_gg_weighted[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * P_gg * ks) * dlogks
-	xi_mg_weighted[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * P_mg * ks) * dlogks
+	xi_gg[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * P_gg * ks) * dlogks
+	xi_gg_weighted[i] = r[i]**2 * xi_gg[i]
 	xi_lin_weighted[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * pk_lin_z0 * ks) * dlogks
 
 #Below are the two graphs that I put in the first draft of the paper
 #I added xi_mg just to see what it looked like
 plt.plot(r, xi_gg_weighted, label=r"$\xi_{\rm gg}$")
-plt.plot(r, xi_mg_weighted, label=r"$\xi_{\rm mg}$")
 plt.plot(r, xi_lin_weighted, color="black", label=r"$\xi_{\rm lin}$")
 plt.ylim(0, 0.0075)
 plt.xlim(0,130)
@@ -775,6 +754,7 @@ plt.xlabel(r'$r [\rm Mpc]$')
 plt.title("Weighted Galaxy Correlation Function Model")
 plt.legend()
 plt.show()
+
 
 xi_lim_1 = np.zeros(len(r))
 xi_lim_9 = np.zeros(len(r))
@@ -801,24 +781,62 @@ Ps, diag gaussian in FS. K mode is independent in FS, cannot be true in real spa
 Add noise to P_gg of gaussian times K, and plug in shot noise
 '''
 
+#Below is the code dedicated to adding noise the CF of P_gg, will come through the covariance matrix
+#Fitting range 30 - 180
+#Im unsure how to represent r and r'
+delta_r = 5
+volume = 13.5e3
+number_density = 6e-4
+
 '''
-P_IRres = fpt_obj.IRres(pk_lin_z0,C_window=C_window)
-# Note that this function needs documentation/validation
+a = np.zeros((180,180))
+np.fill_diagonal(a, xi_gg)
+dirac_CF_matrix = a
+dirac_CF_matrix *= 1 / (volume * number_density**2)
+print(dirac_CF_matrix)
 
-r,xi_IRres = HT.k_to_r(ks,P_IRres,1.5,-1.5,.5, (2.*np.pi)**(-1.5))
-
-# Plot
-plt.plot(r,r**2 * xi, 'g--', label=r'$\xi(k)$ cosmo 1, lin')
-plt.plot(r,r**2 * xi_IRres, 'b', label=r'$\xi(k)$ cosmo 1, IR res')
-plt.plot(r,r**2 * xi_1loop, 'r--', label=r'$\xi(k)$ cosmo 1, 1-loop')
-
-
-plt.xlabel('$r$', fontsize=14)
-plt.ylabel(r'$\xi$', fontsize=14)
-if have_ccl:
-    plt.xlim(5e1,2e2)
-else:
-    plt.xlim(0,1.5e2)
-plt.ylim(0, 50)
-plt.legend(loc='lower left', fontsize=12, frameon=False)
+a = np.zeros((180,180))
+np.fill_diagonal(a, 1)
+dirac_matrix = a
+dirac_matrix *= 1 / (volume * number_density**2)
+print(dirac_matrix)
+print(dirac_matrix[0][0])
 '''
+
+#Recalculating the CF
+r_bins = np.linspace(30, 180, 31)
+print(r_bins)
+r = 0.5 * (r_bins[1:] + r_bins[:-1])
+print(r)
+xi_gg = np.zeros(len(r))
+dlogks = ks[1] - ks[0]
+
+for i in range(len(r)):
+	xi_gg[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * P_gg * ks) * dlogks
+
+print("xi shape: ", np.shape(xi_gg))
+
+j0_return = 2/(4*np.pi*r**2.) * j0j0.rotation_method_bessel_j0j0(ks, P_gg, r, r)
+j0_return_pk_sq = 2/(4*np.pi*r**2.) * j0j0.rotation_method_bessel_j0j0(ks, P_gg*P_gg, r, r)
+
+dirac_cf_diag = xi_gg/delta_r
+dirac_cf_matrix = np.diag(dirac_cf_diag)
+dirac_cf_matrix *= 1 / (volume * number_density**2)
+dirac_cf_matrix *= 2/(4*np.pi*r**2.)
+
+a = np.zeros((30,30))
+np.fill_diagonal(a, 1)
+dirac_matrix = a
+dirac_matrix *= 1 / (volume * number_density**2)
+dirac_matrix /= delta_r
+dirac_matrix *= 2/(4*np.pi*r**2.)
+
+covariance_matrix = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
+print(covariance_matrix[0])
+print(covariance_matrix[1])
+print(np.shape(j0_return))
+print(j0_return[0])
+print(j0_return[1])
+print(j0_return_pk_sq[0])
+print(j0_return_pk_sq[1])
+print(covariance_matrix[0] - covariance_matrix[1])
