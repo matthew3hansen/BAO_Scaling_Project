@@ -398,13 +398,8 @@ dks = np.gradient(ks)
 
 #Below is the code dedicated to adding noise the CF of P_gg, will come through the covariance matrix
 #Fitting range 30 - 180
-#Im unsure how to represent r and r'
 delta_r = 5
 
-
-#I have a question about below equation. Zack said that I need to replace every dkh with with kh dlog(kh)
-#Before I had kh**3 which was different than what the paper had, but I think it was correcting for the dlog(kh)
-#I changed it back to kh**2, pulled the dlog(kh) outside the sum, and left the k resulting in u-sub in the sum (at the end)
 for i in range(len(r)):
 	xi_gg[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * P_gg * dks)
 	xi_gg_weighted[i] = r[i]**2 * xi_gg[i]
@@ -480,6 +475,30 @@ dirac_matrix *= 2/(4*np.pi*r**2.)
 
 covariance_matrix = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
 
+'''
+binning all the terms
+shot noise = numerical integrals
+pk = j1
+
+'''
+
+#Rows will store r values
+#Columns will give the k value we integrated over
+#ANother check, code this analytically. SLize at r and plot vs k
+def get_j0bar(kk, rr):
+    nkbins = len(kk)
+    half_width = (rr[1] - rr[0])*0.49
+    j0_bar = numpy.zeros([len(rr), nkbins])
+    for ii, ir in enumerate(rr):
+        u = numpy.linspace(ir-half_width, ir+half_width, 100)
+        du = u[1] - u[0]
+        uv, kv = numpy.meshgrid(u, kk, indexing='ij')
+        norm = numpy.sum(uv*uv, axis=0)*du
+        ans = numpy.sum(uv*uv*spherical_jn(0, uv*kv), axis=0)*du
+        ans /= norm
+        j0_bar[ii,:] = ans
+    return j0_bar
+
 #Run check on j0 transform
 #xi_gg with np.random.multivariate_normal
 #Set up tests of the correlation function
@@ -488,11 +507,10 @@ covariance_matrix = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
 #Set r2 = 0, make sure it recovers linear CF
 #Superimpose linear cf and this to see if they the same
 
-
 #np.random.multivariate_normal(xi_gg, covariance_matrix)
 
 r = np.linspace(1., 300., 3000)
-j0_test = j0j0.rotation_method_bessel_j0j0(ks, b1**2 * pk_lin_z0 * growth**2., R1, .01)
+j0_test = 1 / (2 * np.pi**2) * j0j0.rotation_method_bessel_j0j0(ks, b1**2 * pk_lin_z0 * growth**2., R1, .01)
 print(np.shape(j0_test))
 print(j0_test[0,:])
 plt.figure()
