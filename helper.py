@@ -386,6 +386,7 @@ P_gg = ((b1 * b1) * P_IRres +
         0.25*(bs * bs) * (Ps2s2 - (8./9.)*s4) +
         0.5*(b1 * b3nl * 2) * Pd1p3)
 
+x = [_ for _ in range(len(P_gg))]
 
 #Calculating the CF
 r = np.linspace(1., 300., 3000)
@@ -406,17 +407,6 @@ for i in range(len(r)):
 	xi_lin_weighted[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * b1**2 * growth**2 * pk_lin_z0 * dks) 
 	xi_lin[i] = np.sum(1 / (2 * np.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * b1**2 * growth**2 * pk_lin_z0 * dks) 
 
-#Below are the two graphs that I put in the first draft of the paper
-plt.figure()
-plt.plot(r, xi_gg_weighted, label=r"$\xi_{\rm gg}$")
-plt.plot(r, xi_lin_weighted, color="black", label=r"$\xi_{\rm lin}$")
-plt.ylabel(r'$r^2 \xi (r)$')
-plt.xlabel(r'$r [\rm Mpc]$')
-plt.title("Weighted Galaxy Correlation Function Model")
-plt.legend()
-plt.show()
-
-
 xi_lim_1 = np.zeros(len(r))
 xi_lim_9 = np.zeros(len(r))
 xi_lim_11 = np.zeros(len(r))
@@ -425,16 +415,6 @@ for i in range(len(r)):
 	xi_lim_1[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r[i]) * np.exp(-ks**2) * pk_lin_z0 * ks) * dlogks
 	xi_lim_9[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, 0.9 * ks * r[i]) * np.exp(-ks**2) * pk_lin_z0 * ks) * dlogks
 	xi_lim_11[i] = r[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, 1.1 * ks * r[i]) * np.exp(-ks**2) * pk_lin_z0 * ks) * dlogks
-	
-plt.figure()
-plt.plot(r, xi_lim_1, color="black", label=r"$\alpha = 1$")
-plt.plot(r, xi_lim_9, color="red", label=r"$\alpha = 0.9$")
-plt.plot(r, xi_lim_11, color="orange", label=r"$\alpha = 1.1$")
-plt.ylabel(r'$r^2 \xi (r)$')
-plt.xlabel(r'$r [\rm Mpc]$')
-plt.title("Different Scaling Galaxy Correlation Function Model")
-plt.legend()
-plt.show()
 
 '''
 Ps, diag gaussian in FS. K mode is independent in FS, cannot be true in real space. Add noise in k space, then FT in real space
@@ -451,8 +431,6 @@ dlogks = ks[1] - ks[0]
 
 for i in range(len(r)):
 	xi_gg[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * P_gg * np.gradient(ks))
-
-print("xi shape: ", np.shape(xi_gg))
 
 R1, R2 = np.meshgrid(r,r) 
 
@@ -471,7 +449,7 @@ np.fill_diagonal(a, 1)
 dirac_matrix = a
 dirac_matrix *= 1 / (effective_volume * number_density**2)
 dirac_matrix /= delta_r
-dirac_matrix *= 2/(4*np.pi*r**2.)
+dirac_matrix *= 2 / (4 * np.pi * r**2.)
 
 covariance_matrix = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
 
@@ -506,27 +484,91 @@ def get_j0bar(kk, rr):
 #Set r' = 0, pk transform recovers linear cf
 #Set r2 = 0, make sure it recovers linear CF
 #Superimpose linear cf and this to see if they the same
+#This adds the noise to xi_gg
+np.random.multivariate_normal(xi_gg, covariance_matrix)
 
-#np.random.multivariate_normal(xi_gg, covariance_matrix)
+#values, matrix = np.lin.eigh(covariance_matrix)
 
 r = np.linspace(1., 300., 3000)
 j0_test = 1 / (2 * np.pi**2) * j0j0.rotation_method_bessel_j0j0(ks, b1**2 * pk_lin_z0 * growth**2., R1, .01)
-print(np.shape(j0_test))
-print(j0_test[0,:])
-plt.figure()
-plt.plot(r[200:1300],  xi_lin[200:1300], label=r"$\xi_{\rm lin}$")
-plt.plot(R1[0,:], j0_test[0,:], color="black", label="j0_test .01")
-plt.ylabel(r'$\xi (r)$')
-plt.xlabel(r'$r [\rm Mpc]$')
-plt.title("J0 Test")
-plt.legend()
-plt.show()
 
-plt.figure()
-plt.plot(r[200:1300], np.log(xi_lin[200:1300]), label=r"$\xi_{\rm lin}$")
-plt.plot(R1[0,:], np.log(j0_test[0,:]), color="black", label="j0_test .01")
-plt.ylabel(r'$\xi (r)$')
-plt.xlabel(r'$r [\rm Mpc]$')
-plt.title("J0 Test")
-plt.legend()
-plt.show()
+def get_data():
+	return xi_gg
+
+def get_covariance_matrix():
+	return covariance_matrix
+
+#Calculate the templates
+# Combine for P_gg or P_mg
+P_gg = ((b1 * b1) * P_IRres +
+        0.5*(b1*b2 * 2) * Pd1d2 +
+        0.25*(b2 * b2) * (Pd2d2 - 2.*s4) +
+        0.5*(b1 * bs * 2) * Pd1s2 +
+        0.25*(b2 * bs * 2) * (Pd2s2 - (4./3.)*s4) +
+        0.25*(bs * bs) * (Ps2s2 - (8./9.)*s4) +
+        0.5*(b1 * b3nl * 2) * Pd1p3)
+#Recalculating the CF
+r_bins = np.linspace(30, 180, 31)
+r = 0.5 * (r_bins[1:] + r_bins[:-1])
+xi_IRrs = np.zeros(len(r))
+xi_d1d2 = np.zeros(len(r))
+xi_d2d2 = np.zeros(len(r))
+xi_d1s2 = np.zeros(len(r))
+xi_d2s2 = np.zeros(len(r))
+xi_s2s2 = np.zeros(len(r))
+xi_d1p3 = np.zeros(len(r))
+
+for i in range(len(r)):
+	xi_IRrs[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * P_IRres * np.gradient(ks))
+	xi_d1d2[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * Pd1d2 * np.gradient(ks))
+	xi_d2d2[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * (Pd2d2 - 2.*s4) * np.gradient(ks))
+	xi_d1s2[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * Pd1s2 * np.gradient(ks))
+	xi_d2s2[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * (Pd2s2 - (4./3.)*s4) * np.gradient(ks))
+	xi_s2s2[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * (Ps2s2 - (8./9.)*s4) * np.gradient(ks))
+	xi_d1p3[i] = np.sum(1 / (2 * math.pi**2) * ks**2 * special.spherical_jn(0, ks * r_bins[i]) * np.exp(-ks**2) * Pd1p3 * np.gradient(ks))
+
+def get_templates():
+	return xi_IRrs, xi_d1d2, xi_d2d2, xi_d1s2, xi_d2s2, xi_s2s2, xi_d1p3
+
+xi_IRrs_prime = np.zeros(len(r))
+xi_d1d2_prime = np.zeros(len(r))
+xi_d2d2_prime = np.zeros(len(r))
+xi_d1s2_prime = np.zeros(len(r))
+xi_d2s2_prime = np.zeros(len(r))
+xi_s2s2_prime = np.zeros(len(r))
+xi_d1p3_prime = np.zeros(len(r))
+
+for i in range(len(r)):
+	xi_IRrs_prime[i] = -r_bins[i] * np.sum(1 / (2 * math.pi**2) * ks**2 * ks * special.spherical_jn(1, ks * r_bins[i]) * np.exp(-ks**2) * P_IRres * np.gradient(ks))
+	xi_d1d2_prime[i] = -r_bins[i] * np.sum(1 / (2 * math.pi**2) * ks**2 * ks * special.spherical_jn(1, ks * r_bins[i]) * np.exp(-ks**2) * Pd1d2 * np.gradient(ks))
+	xi_d2d2_prime[i] = -r_bins[i] * np.sum(1 / (2 * math.pi**2) * ks**2 * ks * special.spherical_jn(1, ks * r_bins[i]) * np.exp(-ks**2) * (Pd2d2 - 2.*s4) * np.gradient(ks))
+	xi_d1s2_prime[i] = -r_bins[i] * np.sum(1 / (2 * math.pi**2) * ks**2 * ks * special.spherical_jn(1, ks * r_bins[i]) * np.exp(-ks**2) * Pd1s2 * np.gradient(ks))
+	xi_d2s2_prime[i] = -r_bins[i] * np.sum(1 / (2 * math.pi**2) * ks**2 * ks * special.spherical_jn(1, ks * r_bins[i]) * np.exp(-ks**2) * (Pd2s2 - (4./3.)*s4) * np.gradient(ks))
+	xi_s2s2_prime[i] = -r_bins[i] * np.sum(1 / (2 * math.pi**2) * ks**2 * ks * special.spherical_jn(1, ks * r_bins[i]) * np.exp(-ks**2) * (Ps2s2 - (8./9.)*s4) * np.gradient(ks))
+	xi_d1p3_prime[i] = -r_bins[i] * np.sum(1 / (2 * math.pi**2) * ks**2 * ks * special.spherical_jn(1, ks * r_bins[i]) * np.exp(-ks**2) * Pd1p3 * np.gradient(ks))
+
+def get_templates_deriv():
+	return xi_IRrs_prime, xi_d1d2_prime, xi_d2d2_prime, xi_d1s2_prime, xi_d2s2_prime, xi_s2s2_prime, xi_d1p3_prime
+
+xi_IRrs_prime2 = np.zeros(len(r))
+xi_d1d2_prime2 = np.zeros(len(r))
+xi_d2d2_prime2 = np.zeros(len(r))
+xi_d1s2_prime2 = np.zeros(len(r))
+xi_d2s2_prime2 = np.zeros(len(r))
+xi_s2s2_prime2 = np.zeros(len(r))
+xi_d1p3_prime2 = np.zeros(len(r))
+
+for i in range(len(r)):
+	xi_IRrs_prime2[i] = r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**4 * (special.spherical_jn(2, ks * r_bins[i]) - (1 / (ks * r_bins[i])) * special.spherical_jn(1, ks * r_bins[i])) * np.exp(-ks**2) * P_IRres * np.gradient(ks))
+	xi_d1d2_prime2[i] = r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**4 * (special.spherical_jn(2, ks * r_bins[i]) - (1 / (ks * r_bins[i])) * special.spherical_jn(1, ks * r_bins[i])) * np.exp(-ks**2) * Pd1d2 * np.gradient(ks))
+	xi_d2d2_prime2[i] = r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**4 * (special.spherical_jn(2, ks * r_bins[i]) - (1 / (ks * r_bins[i])) * special.spherical_jn(1, ks * r_bins[i])) * np.exp(-ks**2) * (Pd2d2 - 2.*s4) * np.gradient(ks))
+	xi_d1s2_prime2[i] = r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**4 * (special.spherical_jn(2, ks * r_bins[i]) - (1 / (ks * r_bins[i])) * special.spherical_jn(1, ks * r_bins[i])) * np.exp(-ks**2) * Pd1s2 * np.gradient(ks))
+	xi_d2s2_prime2[i] = r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**4 * (special.spherical_jn(2, ks * r_bins[i]) - (1 / (ks * r_bins[i])) * special.spherical_jn(1, ks * r_bins[i])) * np.exp(-ks**2) * (Pd2s2 - (4./3.)*s4) * np.gradient(ks))
+	xi_s2s2_prime2[i] = r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**4 * (special.spherical_jn(2, ks * r_bins[i]) - (1 / (ks * r_bins[i])) * special.spherical_jn(1, ks * r_bins[i])) * np.exp(-ks**2) * (Ps2s2 - (8./9.)*s4) * np.gradient(ks))
+	xi_d1p3_prime2[i] = r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * ks**4 * (special.spherical_jn(2, ks * r_bins[i]) - (1 / (ks * r_bins[i])) * special.spherical_jn(1, ks * r_bins[i])) * np.exp(-ks**2) * Pd1p3 * np.gradient(ks))
+
+def get_templates_deriv2():
+	return xi_IRrs_prime2, xi_d1d2_prime2, xi_d2d2_prime2, xi_d1s2_prime2, xi_d2s2_prime2, xi_s2s2_prime2, xi_d1p3_prime2
+
+def get_biases():
+	return [(b1 * b1), (b1 * b2), (b2 * b2), (b1 * bs), (b2 * bs), (bs * bs), (b1 * b3nl)]
