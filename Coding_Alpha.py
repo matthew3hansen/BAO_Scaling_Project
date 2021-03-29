@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 import CAMB_General_Code 
 import helper
 
-def run(alpha, radial_bin_l_, radial_bin_m_):
+def run(alpha):
 	helper_object = helper.Info(alpha)
 	helper_object.calc_CF()
 
@@ -36,11 +36,13 @@ def run(alpha, radial_bin_l_, radial_bin_m_):
 	p1, p2, p3, p4, p5, p6, p7 = helper_object.get_biases()
 
 	parameters = [p1, p2, p3, p4, p5, p6, p7]
+	radial_bin_l_ = helper_object.get_r()
+	radial_bin_m_ = helper_object.get_r()
 
 	#These two variables can represent what two radials bins we will select to due calculation off of. This should be easily converted into a 
 	#scalable model where we can take an arbitary number of bins and compute them with regards to two of them. I can even make this a OOP problem
-	radial_bin_l = radial_bin_l_
-	radial_bin_m = radial_bin_m_
+	#radial_bin_l = radial_bin_l_
+	#radial_bin_m = radial_bin_m_
 
 	'''
 	It might be easier to not do it the way we originally planned with xi1 - xi4 lists. I think having one "tensor" like 
@@ -68,45 +70,64 @@ def run(alpha, radial_bin_l_, radial_bin_m_):
 	#I'm giving the precision matrix a value of 1 right now so the code will compile. I do not know how it will look when we have the actual values
 	#We should talk about how to represent this, I imagine it would be some sort of list or 2d matrix. Either way this will be easy
 	#to change the code around since the variable is only used in the beginning of each definition and no where else
-	precision_matrix_lm = covariance_matrix[radial_bin_l][radial_bin_m]
+	precision_matrix = np.linalg.inv(covariance_matrix)
+	#precision_matrix_lm = covariance_matrix[radial_bin_l][radial_bin_m]
 
-	def product_l_(p1, p2, p3, p4, p5, p6, p7):
+	def product_l_(p1, p2, p3, p4, p5, p6, p7, radial_bin_l):
 		p = np.array([p1, p2, p3, p4, p5, p6, p7])
 		p = p.transpose()
 		return np.matmul(p, np.array(xi_tensor[radial_bin_l])).reshape(3)
 
-	def product_m_(p1, p2, p3, p4, p5, p6, p7):
+	def product_m_(p1, p2, p3, p4, p5, p6, p7, radial_bin_m):
 		p = np.array([p1, p2, p3, p4, p5, p6, p7])
 		p = p.transpose()
 		return np.matmul(p, np.array(xi_tensor[radial_bin_m])).reshape(3)
 
 
 	#Model as a list with each index being a radial bin
-	def model_l_(p1, p2, p3, p4, p5, p6, p7):
-		productl = product_l_(p1, p2, p3, p4, p5, p6, p7)
+	def model_l_(p1, p2, p3, p4, p5, p6, p7, radial_bin_l):
+		productl = product_l_(p1, p2, p3, p4, p5, p6, p7, radial_bin_l)
 		return productl[0] + productl[1] + productl[2]
 
-	def model_m_(p1, p2, p3, p4, p5, p6, p7):
-		productm = product_m_(p1, p2, p3, p4, p5, p6, p7)
+	def model_m_(p1, p2, p3, p4, p5, p6, p7, radial_bin_m):
+		productm = product_m_(p1, p2, p3, p4, p5, p6, p7, radial_bin_m)
 		return productm[0] + productm[1] + productm[2]
 
 
 	def quad_coeff_alpha_(p1, p2, p3, p4, p5, p6, p7):
-		productl = product_l_(p1, p2, p3, p4, p5, p6, p7)
-		productm = product_m_(p1, p2, p3, p4, p5, p6, p7)
-		return 2 * precision_matrix_lm * (productl[1] * productm[2] + productl[2] * productm[1])
+		temp = 0.0
+		for l in range(len(radial_bin_l_)):
+			product_l = product_l_(p1, p2, p3, p4, p5, p6, p7, l)
+			for m in range(len(radial_bin_m_)):
+				product_m = product_m_(p1, p2, p3, p4, p5, p6, p7, m)
+				precision_matrix_lm = precision_matrix[l][m]
+				temp += precision_matrix_lm * (product_l[1] * product_m[2] + product_l[2] * product_m[1])
+		print('quad: ', temp)
+		return 2 * temp
 
 	def linear_coeff_alpha_(p1, p2, p3, p4, p5, p6, p7):
-		productl = product_l_(p1, p2, p3, p4, p5, p6, p7)
-		productm = product_m_(p1, p2, p3, p4, p5, p6, p7)
-		return precision_matrix_lm * (productl[0] * productm[1] + productl[2] * productm[0] + 2 * productl[1] * productm[1] \
-			   - data_list[radial_bin_l] * productm[2] - data_list[radial_bin_m] * productl[2])
+		temp = 0.0
+		for l in range(len(radial_bin_l_)):
+			productl = product_l_(p1, p2, p3, p4, p5, p6, p7, l)
+			for m in range(len(radial_bin_m_)):
+				productm = product_m_(p1, p2, p3, p4, p5, p6, p7, m)
+				precision_matrix_lm = precision_matrix[l][m]
+				temp += precision_matrix_lm * (productl[0] * productm[2] + productl[2] * productm[0] + 2 * productl[1] * productm[1] \
+			   - data_list[l] * productm[2] - data_list[m] * productl[2])
+		print('lin: ', temp)
+		return temp
 
 	def const_coeff_alpha_(p1, p2, p3, p4, p5, p6, p7):
-		productl = product_l_(p1, p2, p3, p4, p5, p6, p7)
-		productm = product_m_(p1, p2, p3, p4, p5, p6, p7)
-		return precision_matrix_lm * (productl[0] * productm[1] + productl[1] * productm[0] - data_list[radial_bin_l] * productm[1] - \
-			   data_list[radial_bin_m] * productl[1])
+		temp = 0.0
+		for l in range(len(radial_bin_l_)):
+			productl = product_l_(p1, p2, p3, p4, p5, p6, p7, l)
+			for m in range(len(radial_bin_m_)):
+				productm = product_m_(p1, p2, p3, p4, p5, p6, p7, m)
+				precision_matrix_lm = precision_matrix[l][m]
+				temp += precision_matrix_lm * (productl[0] * productm[1] + productl[1] * productm[0] - data_list[l] * productm[1] - \
+					data_list[m] * productl[1])
+		print('con: ', temp)
+		return temp
 
 	#I'm not sure what delta_alpha we want to use
 	def delta_alpha_(p1, p2, p3, p4, p5, p6, p7):
@@ -116,6 +137,8 @@ def run(alpha, radial_bin_l_, radial_bin_m_):
 		return ((-linear_coeff_alpha + np.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha)) / ( 2 * quad_coeff_alpha), \
 		(-linear_coeff_alpha - np.sqrt(linear_coeff_alpha**2 - 4 * quad_coeff_alpha * const_coeff_alpha)) / ( 2 * quad_coeff_alpha))
 
+	return delta_alpha_(p1, p2, p3, p4, p5, p6, p7)
+	'''
 	#Define all the alpha derivatives with respect to its coefficients
 	def dalpha_dquad_(p1, p2, p3, p4, p5, p6, p7):
 		quad_coeff_alpha = quad_coeff_alpha_(p1, p2, p3, p4, p5, p6, p7)
@@ -389,5 +412,4 @@ def run(alpha, radial_bin_l_, radial_bin_m_):
 		log4 = dlog_dp4_(p1, p2, p3, p4, p5, p6, p7)
 
 		return(log1, log2, log3, log4)
-
-	return delta_alpha_(p1, p2, p3, p4, p5, p6, p7)
+	'''
