@@ -398,15 +398,18 @@ class Info:
 		plt.show()
 
 	def calc_CF(self):
+		xi_IRrs_alpha = np.zeros(len(self.r))
 		for i in range(len(self.r)):
 			self.xi_gg[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_gg * np.gradient(self.ks))
-
+		
+		for i in range(len(self.r)):
+			xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
 		# use b1 ^2 * Pklin in the covariance matrix
 		j0_return = 2./(self.effective_volume * self.number_density * np.pi**2.) * j0j0.rotation_method_bessel_j0j0(self.ks, self.b1 ** 2 * self.pk_lin_z0 * self.growth **2., self.R1, self.R2)
 		# this one may need to be corrected to include P2, P4, if we are fitting xi0 (or are we fitting xi(r))?
 		j0_return_pk_sq = 1./(self.effective_volume * np.pi**2.) * j0j0.rotation_method_bessel_j0j0(self.ks, (self.b1 ** 2 * self.pk_lin_z0 * self.growth **2.)**2., self.R1, self.R2)
 
-		dirac_cf_diag = self.xi_gg / self.delta_r
+		dirac_cf_diag = xi_IRrs_alpha / self.delta_r
 		dirac_cf_matrix = np.diag(dirac_cf_diag)
 		dirac_cf_matrix *= 1 / (self.effective_volume * self.number_density**2)
 		dirac_cf_matrix *= 2/(4 * np.pi * self.r**2.)
@@ -420,7 +423,9 @@ class Info:
 
 		self.covariance_matrix = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
 		np.random.seed(1234) # for reproducibility
-		self.xi_gg_data = np.random.multivariate_normal(self.xi_gg, self.covariance_matrix)
+		print('self.alpha',self.alpha)
+		#self.xi_gg_data = np.random.multivariate_normal(xi_IRrs_alpha, self.covariance_matrix)
+		self.xi_gg_data = xi_IRrs_alpha
 
 	'''
 	binning all the terms
@@ -469,24 +474,172 @@ class Info:
 
 		for i in range(len(self.r)):
 			self.xi_IRrs[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
-		print('xi: ', self.xi_IRrs[0])
+		#print('xi: ', self.xi_IRrs[0])
+
 		return self.xi_IRrs
 
 	def templates_deriv(self):
 		self.xi_IRrs_prime = np.zeros(len(self.r))
 
 		for i in range(len(self.r)):
-			self.xi_IRrs_prime[i] = -self.r_bins[i] * np.sum(1 / (2 * math.pi**2) * self.ks**3 * special.spherical_jn(1, self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
-		print('xi\': ', self.xi_IRrs_prime[0])
+			self.xi_IRrs_prime[i] = -self.r_bins[i] * np.sum(1 / (2 * math.pi**2) * self.ks**3 * special.spherical_jn(1, self.ks * self.r_bins[i]) * np.exp(-self.ks**2)\
+			 * self.P_IRres * np.gradient(self.ks))
+		#print('xi\': ', self.xi_IRrs_prime[0])
+		#self.xi_IRrs_prime *= -1
 		return self.xi_IRrs_prime
 
 	def templates_deriv2(self):
 		self.xi_IRrs_prime2 = np.zeros(len(self.r))
 
 		for i in range(len(self.r)):
-			self.xi_IRrs_prime2[i] = self.r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * self.ks**4 * (special.spherical_jn(2, self.ks * self.r_bins[i]) - (1 / (self.ks * self.r_bins[i])) * special.spherical_jn(1, self.ks * self.r_bins[i])) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
-		print('xi\'\': ', self.xi_IRrs_prime2[0])
+			self.xi_IRrs_prime2[i] = self.r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * self.ks**4 * (special.spherical_jn(2, self.ks * self.r_bins[i]) - (1 / (self.ks * self.r_bins[i])) \
+				* special.spherical_jn(1, self.ks * self.r_bins[i])) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+		#print('xi\'\': ', self.xi_IRrs_prime2[0])
+
 		return self.xi_IRrs_prime2
+
+	def graphing_avg(self):
+		xi_IRrs_alpha = np.zeros(len(self.r))
+		alphas = np.linspace(0.98, 1.00, 40)
+		averages = np.zeros(len(alphas))
+		log = np.zeros(len(alphas))
+
+		for j in range(len(alphas)):
+			for i in range(len(self.r)):
+				xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, 0.99 * self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+		
+			rhs = self.xi_IRrs + self.xi_IRrs_prime * (alphas[j] - 1) + 0.5 * self.xi_IRrs_prime2 * (alphas[j] - 1)**2
+
+			print('alpha: ', alphas[j])
+			print('rhs: ', rhs)
+			print('lhs: ', xi_IRrs_alpha)
+			ratio = rhs / xi_IRrs_alpha
+			print('fraction: ', ratio)
+			averages[j] = np.mean(ratio)
+			print('ratio avg: ', averages[j])
+			log[j] = np.dot(np.dot((xi_IRrs_alpha - rhs),np.linalg.inv(self.covariance_matrix)), xi_IRrs_alpha - rhs)
+
+			print('First: ', np.dot(np.dot((xi_IRrs_alpha - rhs),np.linalg.inv(self.covariance_matrix)), xi_IRrs_alpha - rhs))
+
+			drhs_dalpha = self.xi_IRrs_prime + self.xi_IRrs_prime2 * (alphas[j] - 1) + self.xi_IRrs_prime + self.xi_IRrs_prime2 * (alphas[j] - 1)
+			print('Second: ', (np.dot(np.dot(np.linalg.inv(self.covariance_matrix), drhs_dalpha), drhs_dalpha)))
+
+		#plt.plot(self.r, self.r**2 * self.xi_IRrs, label='template')
+		plt.plot(self.r, self.r * self.xi_IRrs_prime, label='first')
+		second_deriv = np.gradient(self.xi_IRrs_prime / self.r) / np.gradient(self.r)
+		plt.plot(self.r, self.r**2 * second_deriv, label='second')
+		plt.plot(self.r, self.xi_IRrs_prime2)
+		print((self.r**2 * second_deriv) / self.xi_IRrs_prime2)
+		plt.legend()
+		plt.show()
+		for i in range(len(averages)):
+			print('alpha = ', alphas[i], ' average = ', averages[i])
+		plt.scatter(alphas, log)
+		plt.xlabel('alpha')
+		plt.ylabel('Log likelihood')
+		#plt.axhline(y=1)
+		plt.show()
+
+	def delta_alpha(self, data_list):
+		xi_IRrs_alpha = np.zeros(len(self.r))
+		#alphas = [0.99]
+		#log = np.zeros(len(alphas))
+
+		precision = np.linalg.inv(self.covariance_matrix)
+		
+		for i in range(len(self.r)):
+						xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, 0.99 * self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+		
+		#for j in range(len(alphas)):
+		total = 0
+		total_expanded = 0
+		#model = self.xi_IRrs + self.xi_IRrs_prime * (alphas[j] - 1) + 0.5 * self.xi_IRrs_prime2 * (alphas[j] - 1)**2
+		#dmodel_dalpha = self.xi_IRrs_prime + self.xi_IRrs_prime2 * (alphas[j] - 1)
+		constant_term = 0
+		linear_term = 0
+		quadratic_term = 0
+		third_term = 0
+		for l in range(len(self.r)):
+			for m in range(len(self.r)):
+				#total += precision[l][m] * (- data_list[l] * dmodel_dalpha[m] - data_list[m] * dmodel_dalpha[l] + dmodel_dalpha[l] * model[m] + dmodel_dalpha[m] * model[l])
+				
+				constant_term += precision[l][m] * (- data_list[l] * self.xi_IRrs_prime[m] - data_list[m] * self.xi_IRrs_prime[l] \
+						+ self.xi_IRrs_prime[l] * self.xi_IRrs[m] + self.xi_IRrs_prime[m] * self.xi_IRrs[l])
+
+				linear_term += precision[l][m] * (- data_list[l] * self.xi_IRrs_prime2[m] - data_list[m] * self.xi_IRrs_prime2[l] + 2 * self.xi_IRrs_prime[l] * self.xi_IRrs_prime[m] \
+								+ self.xi_IRrs_prime2[l] * self.xi_IRrs[m] + self.xi_IRrs_prime2[m] * self.xi_IRrs[l]) #* (alphas[j] - 1)
+
+				quadratic_term += precision[l][m] * (0.5 * self.xi_IRrs_prime[l] * self.xi_IRrs_prime2[m] + self.xi_IRrs_prime2[l] * self.xi_IRrs_prime[m] \
+								+ 0.5 * self.xi_IRrs_prime[m] * self.xi_IRrs_prime2[l] + self.xi_IRrs_prime2[m] * self.xi_IRrs_prime[l]) #* (alphas[j] - 1)**2
+
+				#third_term += precision[l][m] * (0.5 * self.xi_IRrs_prime2[l] * self.xi_IRrs_prime2[m] + 0.5 * self.xi_IRrs_prime2[l] * self.xi_IRrs_prime2[m]) * (alphas[j] - 1)**3
+
+				#my_model = constant_term + linear_term + quadratic_term + third_term
+				#total_expanded += my_model
+
+		print('constant term: ', constant_term)
+		print('linear term: ', linear_term)
+		print('quad term: ', quadratic_term)
+
+		delta_alpha = (-linear_term + np.sqrt(linear_term**2 - 4 * quadratic_term * constant_term)) / ( 2 * quadratic_term)
+		print('alpha: ', delta_alpha + 1)
+
+		#print('non-expanded: ', alphas[j], ': ', total)
+		#print('expanded: ', alphas[j], ': ', total_expanded)
+		return delta_alpha
+
+
+
+	def templates_times_alpha(self):
+		self.xi_IRrs_alpha = np.zeros(len(self.r))
+		print(np.shape(self.xi_IRrs))
+		print(np.shape(self.xi_IRrs_prime))
+		print(np.shape(self.xi_IRrs_prime2))
+		for i in range(len(self.r)):
+			self.xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, 0.99 * self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+	
+		rhs = self.xi_IRrs + self.xi_IRrs_prime * (self.alpha-1) + 0.5 * self.xi_IRrs_prime2 * (self.alpha - 1)**2
+
+		print('rhs: ', rhs)
+		print('lhs: ', self.xi_IRrs_alpha)
+		ratio = rhs / self.xi_IRrs_alpha
+		print('fraction: ', ratio)
+		print('ratio avg: ', np.mean(ratio))
+
+		print(np.dot(np.dot((self.xi_IRrs_alpha-rhs),np.linalg.inv(self.covariance_matrix)), self.xi_IRrs_alpha-rhs))
+
+		drhs_dalpha = self.xi_IRrs_prime + self.xi_IRrs_prime2 * (self.alpha - 1) + self.xi_IRrs_prime + self.xi_IRrs_prime2 * (self.alpha - 1)
+		print('second: ', (np.dot(np.dot(np.linalg.inv(self.covariance_matrix), drhs_dalpha), drhs_dalpha)))
+
+	def templates_times_alpha_loop(self):
+		alphas = np.linspace(.95, 1.05, 11)
+		self.xi_IRrs_alpha_loop = np.zeros((len(self.r),len(alphas)))
+		#print(self.xi_IRrs)
+		print(self.xi_IRrs_prime[0])
+		#print(np.shape(self.xi_IRrs_prime2))
+		for j in range(len(alphas)):
+			for i in range(len(self.r)):
+				self.xi_IRrs_alpha_loop[i, j] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, alphas[j] * self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+		
+		print(self.xi_IRrs_alpha_loop[0,5])
+		print('alphas: ', alphas)
+		print((self.xi_IRrs_prime[0] * (alphas-1) + self.xi_IRrs_alpha_loop[0,5]))
+		print(self.xi_IRrs_alpha_loop[0,:])
+		plt.plot(alphas, self.xi_IRrs_prime[0] * (alphas-1) + self.xi_IRrs_alpha_loop[0,5])
+
+		plt.plot(alphas, self.xi_IRrs_alpha_loop[0,:])
+		plt.show()
+		print(self.xi_IRrs_alpha_loop[:,6])
+		print('1: ', (self.xi_IRrs_alpha_loop[:,6]-self.xi_IRrs_alpha_loop[:,4])/(alphas[6]-alphas[4]))
+		print('2: ', self.xi_IRrs_prime)
+		'''
+		print(1/0)
+		rhs = self.xi_IRrs + self.xi_IRrs_prime * (1 - self.alpha) + 0.5 * self.xi_IRrs_prime2 * (1. - self.alpha)**2
+
+		print('rhs: ', rhs)
+		print('lhs: ', self.xi_IRrs_alpha_loop)
+		'''
+
 
 	def get_biases(self):
 		return (self.b1 * self.b1)
