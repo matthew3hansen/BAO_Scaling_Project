@@ -365,7 +365,7 @@ def run(alpha=1.):
 				
 
 				#print('Sum: ', (data_both - first - second + third))
-		
+		'''
 		for i, true_delta_alpha in enumerate(true_delta_alpha_list):
 			a = black_a * true_delta_alpha**4 + black_b * true_delta_alpha**3 + black_c * true_delta_alpha**2 + black_d * true_delta_alpha + black_e
 			b = green_a * true_delta_alpha**2 + green_b * true_delta_alpha + green_c
@@ -391,23 +391,24 @@ def run(alpha=1.):
 		plt.plot(true_delta_alpha_list, computation_list, label='Analytic')
 		plt.legend()
 		plt.show()
+		'''
 
-
-		return (-gamma - np.sqrt(gamma**2 - 4 * beta * delta)) / (2 * beta) 
-		
-	'''
 		beta = .5 * green_a * green_q / black_e + .5 * green_b * green_p / black_e - .5 * green_b * black_d * green_q / black_e**2 \
-				- .5 * green_c * black_d * green_p / black_e**2 + .5 * green_c * (black_d**2 / black_e**3 - black_c / black_e) * green_q \
+				- .5 * green_c * black_d * green_p / black_e**2 + .5 * green_c * (black_d**2 / black_e**3 - black_c / black_e**2) * green_q \
 				- .25 * ((2 * green_a * green_c + green_b**2) / black_e**2) * red_c - .5 * green_b * green_c * red_b / black_e**2 \
 				+ green_b * green_c * black_d * red_c / black_e**3 - .25 * green_c**2 * red_a / black_e**2 \
-				+ .5 * green_c**2 * black_d * red_b / black_e**3 - .125 * green_c**2 * (6 * black_d**2 / black_e**4 - 4 * black_c / black_e**3) * red_c
+				+ .5 * green_c**2 * black_d * red_b / black_e**3 - .125 * green_c**2 * (6 * black_d**2 / black_e**4 - 4 * black_c / black_e**3) * red_c \
+				- 0.5 * red_a / black_e + 0.5 * black_d * red_b / black_e**2 - 0.25 * ( 2 * black_d**2 / black_e**3 - 2 * black_c / black_e**2 ) * red_c
 
 		gamma = .5 * green_b * green_q / black_e + .5 * green_c * green_p / black_e - .5 * green_c * black_d * green_q / black_e**2 \
-				- .5 * green_b * green_c * red_c / black_e**2 - .25 * green_c**2 * red_b / black_e**2 + .5 * green_c**2 * black_d * red_c / black_e**3
+				- .5 * green_b * green_c * red_c / black_e**2 - .25 * green_c**2 * red_b / black_e**2 + .5 * green_c**2 * black_d * red_c / black_e**3 \
+				- 0.5 * red_b / black_e + 0.5 * black_d * red_c / black_e**2
 
-		delta = .5 * green_c * green_q / black_e - .25 * green_c**2 * red_c / black_e**2
+		delta = .5 * green_c * green_q / black_e - .25 * green_c**2 * red_c / black_e**2 - 0.5 * red_c / black_e
 
-		print('discriminat: ', gamma**2 - 4 * beta * delta)'''
+		print('discriminat: ', gamma**2 - 4 * beta * delta)
+
+		return (-gamma - np.sqrt(gamma**2 - 4 * beta * delta)) / (2 * beta) 
 
 	#Code to solve the system of equations
 	def functions_(parameters, dalpha):
