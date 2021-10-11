@@ -14,7 +14,7 @@ alphas = np.linspace(0.9, 1.1, 30)
 predicted = np.zeros(len(alphas))
 
 for i in range(len(alphas)):
-	predicted[i] = BAO_scale_fitting.run(alphas[i]) + 1
+	predicted[i] = BAO_scale_fitting.fixed_linear_bias(alphas[i]) + 1
 	print('predicted alpha: ', predicted[i])
 	print()
 
