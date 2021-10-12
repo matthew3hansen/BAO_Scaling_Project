@@ -6,6 +6,7 @@ Author(s): Matt Hansen, Alex Krolewski'
 import numpy as np
 import scipy.special as special
 import math
+
 import sys, platform, os
 import matplotlib
 from matplotlib import pyplot as plt
@@ -173,7 +174,7 @@ class Info:
         self.Pd1p3 = self.g4 * self.P_bias_E[8]
         self.s4 =  self.g4 * self.P_bias_E[7] # sigma^4 which determines the (non-physical) low-k contributions
     
-        self.P_IRres = self.g2 * self.fpt_obj.IRres(self.pk_lin_z0, C_window=self.C_window)
+        self.P_IRres = self.b1**2 * self.g2 * self.fpt_obj.IRres(self.pk_lin_z0, C_window=self.C_window)
         # Note that this function needs documentation/validation
     
         self.r, self.xi_IRres = HT.k_to_r(self.ks, self.P_IRres,1.5,-1.5,.5, (2.*np.pi)**(-1.5))
