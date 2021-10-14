@@ -173,7 +173,7 @@ class Info:
         self.Ps2s2 = self.g4 * self.P_bias_E[6]
         self.Pd1p3 = self.g4 * self.P_bias_E[8]
         self.s4 =  self.g4 * self.P_bias_E[7] # sigma^4 which determines the (non-physical) low-k contributions
-    
+        
         self.P_IRres = self.b1**2 * self.g2 * self.fpt_obj.IRres(self.pk_lin_z0, C_window=self.C_window)
         # Note that this function needs documentation/validation
     
