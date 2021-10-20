@@ -247,5 +247,71 @@ class Info:
         return self.xi_IRrs_prime2
     
     
+    def templates_deriv3(self):
+        self.xi_IRrs_prime3 = np.zeros(len(self.r))
+        
+        for i in range(len(self.r)):
+            self.xi_IRrs_prime3[i] = self.r_bins[i]**3 * np.sum(1. / (2. * math.pi**2) * self.ks**5 * (-1. * \
+                                                                special.spherical_jn(3, self.ks * self.r_bins[i]) \
+                                                                + (2. / (self.ks * self.r_bins[i])) \
+                                                                * special.spherical_jn(2, self.ks * self.r_bins[i])) \
+                                                                * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+                
+            self.xi_IRrs_prime3[i] += self.r_bins[i] * np.sum(1. / (2. * math.pi**2) * self.ks**3 * ( \
+                                                                special.spherical_jn(1, self.ks * self.r_bins[i])) \
+                                                                * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+                
+            self.xi_IRrs_prime3[i] += self.r_bins[i]**2 * np.sum(1. / (2. * math.pi**2) * self.ks**4 * ( \
+                                                                special.spherical_jn(2, self.ks * self.r_bins[i]) \
+                                                                + (1. / (self.ks * self.r_bins[i])) \
+                                                                * special.spherical_jn(1, self.ks * self.r_bins[i])) \
+                                                                * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+        
+        return self.xi_IRrs_prime3
+    
+    
+    def templates_alpha(self):
+        self.xi_IRrs_alpha = np.zeros(len(self.r))
+    
+        for i in range(len(self.r)):
+            self.xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+    
+        return self.xi_IRrs_alpha
+    
+    
+    def templates_alpha_deriv(self):
+        self.xi_IRrs_alpha_prime = np.zeros(len(self.r))
+    
+        for i in range(len(self.r)):
+            self.xi_IRrs_alpha_prime[i] = -self.r_bins[i] * np.sum(1 / (2 * math.pi**2) * self.ks**3 * special.spherical_jn(1, self.alpha * self.ks * self.r_bins[i]) * np.exp(-self.ks**2)\
+                                                         * self.P_IRres * np.gradient(self.ks))
+        return self.xi_IRrs_alpha_prime
+    
+    
+    def templates_alpha_deriv2(self):
+        self.xi_IRrs_alpha_prime2 = np.zeros(len(self.r))
+    
+        for i in range(len(self.r)):
+            self.xi_IRrs_alpha_prime2[i] = self.r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * self.ks**4 * (special.spherical_jn(2, self.alpha * self.ks * self.r_bins[i]) - (1 / (self.alpha * self.ks * self.r_bins[i])) \
+                                                                 * special.spherical_jn(1, self.alpha * self.ks * self.r_bins[i])) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))    
+        return self.xi_IRrs_alpha_prime2
+    
+    def templates_alpha_deriv3(self):
+        self.xi_IRrs_alpha_prime3 = np.zeros(len(self.r))
+        
+        for i in range(len(self.r)):
+            self.xi_IRrs_alpha_prime3[i] = self.r_bins[i]**3 * np.sum(1 / (2 * math.pi**2) * self.ks**5 * \
+                                                                (-1 * special.spherical_jn(3, self.alpha * elf.ks * self.r_bins[i]) \
+                                                                 + (2. / (self.ks * self.r_bins[i])) * special.spherical_jn(2, self.alpha * self.ks * self.r_bins[i]) \
+                                                                    + special.spherical_jn(2, self.alpha * self.ks * self.r_bins[i]) \
+                                                                    - (1. / (self.ks * self.r_bins[i])) * special.spherical_jn(1, self.alpha * self.ks * self.r_bins[i])) \
+                                                                    * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))    
+        return self.xi_IRrs_alpha_prime3
+    
+    def polynomial_terms(self):
+        self.G = np.zeros(len(self.r))
+        
+        return self.G
+    
     def get_biases(self):
         return (self.b1 * self.b1)

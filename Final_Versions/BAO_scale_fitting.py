@@ -89,8 +89,29 @@ def marginal_linear_bias(alpha = 1.0):
     
     xi_IRrs_prime2 = helper_object.templates_deriv2()
     
-    precision = np.linalg.inv(covariance_matrix)
+    xi_IRrs_prime3 = helper_object.templates_deriv3()
     
+    '''
+    helper1 = BAO_scale_fitting_helper.Info(0.998)
+    helper2 = BAO_scale_fitting_helper.Info(1.002)
+    helper3 = BAO_scale_fitting_helper.Info(1.)
+    
+    prime1 = helper1.templates_deriv2()
+    prime2 = helper2.templates_deriv2()
+    prime3 = helper3.templates_deriv3()
+    #print(prime1)
+    #print(prime2)
+    temp_prime = (prime1 - prime2) / (1.002 - 0.998)
+    temp_diff = prime3 - temp_prime
+    #print(prime3)
+    #print(temp_prime)
+    #print(temp_diff)
+    #print(temp_diff / prime3)
+    '''
+    
+    G = helper_object.polynomial_terms()
+    
+    precision = np.linalg.inv(covariance_matrix)
     
     start = time.time()
     
@@ -106,9 +127,11 @@ def marginal_linear_bias(alpha = 1.0):
     temp = np.multiply.outer(xi_IRrs, xi_IRrs)
     c_a = (0.5 * np.multiply(precision, temp)).sum()
     
-    temp = np.multiply.outer(xi_IRrs_prime, xi_IRrs_prime2)
+    temp = 1.5 * np.multiply.outer(xi_IRrs_prime, xi_IRrs_prime2)
     temp1 = temp.transpose()
-    a_da = (0.75 * np.multiply(precision, (temp + temp1))).sum()
+    temp2 = 0.5 * np.multiply.outer(xi_IRrs_prime3, xi_IRrs)
+    temp3 = temp2.transpose()
+    a_da = (0.5 * np.multiply(precision, (temp + temp1 + temp2 + temp3))).sum()
     
     temp = np.multiply.outer(xi_IRrs, xi_IRrs_prime2)
     temp1 = temp.transpose()
@@ -119,17 +142,29 @@ def marginal_linear_bias(alpha = 1.0):
     temp1 = temp.transpose()
     c_da = (0.5 * np.multiply(precision, (temp + temp1))).sum()
     
-    temp = np.multiply.outer(data_list, xi_IRrs_prime2)
+    temp = -0.5 * np.multiply.outer(data_list, xi_IRrs_prime2)
     temp1 = temp.transpose()
-    a_b = (0.25 * np.multiply(precision, (temp + temp1))).sum()
+    temp2 = 0.0 #0.5 * np.multiply.outer(xi_IRrs_prime2, G)
+    temp3 = 0.0 #temp2.transpose()
+    a_b = (-0.5 * np.multiply(precision, (temp + temp1 + temp2 + temp3))).sum()
     
-    temp = np.multiply.outer(data_list, xi_IRrs_prime)
+    temp = -1 * np.multiply.outer(data_list, xi_IRrs_prime)
     temp1 = temp.transpose()
-    b_b = (0.5 * np.multiply(precision, (temp + temp1))).sum()
+    temp2 = 0.0 #np.multiply.outer(xi_IRrs_prime, G)
+    temp3 = 0.0 #temp2.transpose()
+    b_b = (-0.5 * np.multiply(precision, (temp + temp1 + temp2 + temp3))).sum()
     
-    temp = np.multiply.outer(data_list, xi_IRrs)
+    temp = -1 * np.multiply.outer(data_list, xi_IRrs)
     temp1 = temp.transpose()
-    c_b = (0.5 * np.multiply(precision, (temp + temp1))).sum()
+    temp2 = 0.0 #np.multiply.outer(G, xi_IRrs)
+    temp3 = 0.0 #temp2.transpose()
+    c_b = (-0.5 * np.multiply(precision, (temp + temp1 + temp2 + temp3))).sum()
+    
+    temp = - 0.5 * np.multiply.outer(data_list, xi_IRrs_prime3)
+    temp1 = temp.transpose()
+    temp2 = 0.0 #0.5 * (np.multiply.outer(xi_IRrs_prime3 , G))
+    temp3 = 0.0 #temp1.transpose()
+    a_db = (-0.5 * np.multiply(precision, (temp + temp1 + temp2 + temp3))).sum()
     
     temp = np.multiply.outer(data_list, xi_IRrs_prime2)
     temp1 = temp.transpose()
@@ -141,25 +176,25 @@ def marginal_linear_bias(alpha = 1.0):
 
     #print('Vectorize: ', time.time() - start)
     #The vectorizable equations are 75 times faster than the for-loop equations
+    A = - 0.5 * a_da / c_a + 0.5 * b_a * b_da / c_a**2 - 0.25 * c_da * (2 * b_a**2 / c_a**3 - 2 * a_a / c_a**2) \
+           + 0.5 * a_b * c_db / c_a + 0.5 * b_b * b_db / c_a - 0.5 * c_b * b_a * b_db / c_a**2 + 0.25 * c_b * c_db \
+           * (2 * b_a**2 / c_a**3 - 2 * a_a / c_a**2) - 0.25 * c_da * (2 * a_b * c_b + b_b**2) / c_a**2 \
+           - 0.5 * b_b * c_b * b_da / c_a**2 + b_b * c_b * b_a * c_da / c_a**3 - 0.25 * c_b**2 * a_da / c_a**2 \
+           + 0.5 * c_b**2 * b_a * b_da / c_a**3 - 0.125 * c_b**2 * c_da * (6 * b_a**2 / c_a**4 - 4 * a_a / c_a**3) \
+           - 0.5 * b_a * b_b * c_db / c_a**2 + 0.5 * c_b * a_db / c_a
     
-    beta = .5 * a_b * c_db / c_a + .5 * b_b * b_db / c_a - .5 * b_b * b_a * c_db / c_a**2 \
-            - .5 * c_b * b_a * b_db / c_a**2 + .5 * c_b * (b_a**2 / c_a**3 - a_a / c_a**2) * c_db \
-            - .25 * ((2 * a_b * c_b + b_b**2) / c_a**2) * c_da - .5 * b_b * c_b * b_da / c_a**2 \
-            + b_b * c_b * b_a * c_da / c_a**3 - .25 * c_b**2 * a_da / c_a**2 \
-            + .5 * c_b**2 * b_a * b_da / c_a**3 - .125 * c_b**2 * (6 * b_a**2 / c_a**4 - 4 * a_a / c_a**3) * c_da \
-            - 0.5 * a_da / c_a + 0.5 * b_a * b_da / c_a**2 - 0.25 * ( 2 * b_a**2 / c_a**3 - 2 * a_a / c_a**2 ) * c_da
-
-    gamma = .5 * b_b * c_db / c_a + .5 * c_b * b_db / c_a - .5 * c_b * b_a * c_db / c_a**2 \
+    B = .5 * b_b * c_db / c_a + .5 * c_b * b_db / c_a - .5 * c_b * b_a * c_db / c_a**2 \
             - .5 * b_b * c_b * c_da / c_a**2 - .25 * c_b**2 * b_da / c_a**2 + .5 * c_b**2 * b_a * c_da / c_a**3 \
             - 0.5 * b_da / c_a + 0.5 * b_a * c_da / c_a**2
 
-    delta = .5 * c_b * c_db / c_a - .25 * c_b**2 * c_da / c_a**2 - 0.5 * c_da / c_a
+    C = .5 * c_b * c_db / c_a - .25 * c_b**2 * c_da / c_a**2 - 0.5 * c_da / c_a
     
-    value = (-gamma - np.sqrt(gamma**2 - 4 * beta * delta)) / (2 * beta)
-    
-    return (time.time() - start)
-    #return (-gamma - np.sqrt(gamma**2 - 4 * beta * delta)) / (2 * beta)
+    value = (-B - np.sqrt(B**2 - 4 * A * C)) / (2 * A)
+    return value
+    #return (time.time() - start)
 
+#marginal_linear_bias()
+'''
 times = np.zeros(100)
 alphas = np.linspace(0.9, 1.1, 100)
 for i in range(100):
@@ -168,3 +203,4 @@ for i in range(100):
     print()
 
 print(np.mean(times))
+'''
