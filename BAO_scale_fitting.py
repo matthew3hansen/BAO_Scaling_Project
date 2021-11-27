@@ -166,10 +166,10 @@ def marginal_linear_bias(alpha = 1.0):
     #print('Vectorize: ', time.time() - start)
     #The vectorizable equations are 75 times faster than the for-loop equations
     A = - 0.5 * a_da / c_a + 0.5 * b_a * b_da / c_a**2 - 0.25 * c_da * (2 * b_a**2 / c_a**3 - 2 * a_a / c_a**2) \
-           + 0.5 * a_b * c_db / c_a + 0.5 * b_b * b_db / c_a - 0.5 * c_b * b_a * b_db / c_a**2 + 0.25 * c_b * c_db \
+           + 0.5 * a_b * c_db / c_a + 0.5 * b_b * b_db / c_a - 0.5 * c_b * b_a * b_db / c_a**2 + 0.25 * c_b * c_db\
            * (2 * b_a**2 / c_a**3 - 2 * a_a / c_a**2) - 0.25 * c_da * (2 * a_b * c_b + b_b**2) / c_a**2 \
            - 0.5 * b_b * c_b * b_da / c_a**2 + b_b * c_b * b_a * c_da / c_a**3 - 0.25 * c_b**2 * a_da / c_a**2 \
-           + 0.5 * c_b**2 * b_a * b_da / c_a**3 - 0.125 * c_b**2 * c_da * (6 * b_a**2 / c_a**4 - 4 * a_a / c_a**3) \
+           + 0.5 * c_b**2 * b_a * b_da / c_a**3 - 0.125 * c_b**2 * c_da * (6 * b_a**2 / c_a**4 - 4 * a_a / c_a**3)\
            - 0.5 * b_a * b_b * c_db / c_a**2 + 0.5 * c_b * a_db / c_a
     
     B = .5 * b_b * c_db / c_a + .5 * c_b * b_db / c_a - .5 * c_b * b_a * c_db / c_a**2 \
@@ -277,6 +277,50 @@ b1 = helper_object.get_biases()
 
 xi_IRrs_splined = Spline(helper_object.r, xi_IRrs)
 
+#Below is the plot the corvariance matrices
+plt.imshow(covariance_matrix)
+plt.colorbar()
+plt.xlabel('Row Index')
+plt.ylabel('Column Index')
+plt.title('Covariance Matrix')
+plt.show()
+
+correlation_matrix = np.zeros_like(covariance_matrix)
+fraction_error_matrix = np.zeros_like(covariance_matrix)
+
+for i in range(np.shape(covariance_matrix)[0]):
+    for j in range(np.shape(covariance_matrix)[0]):
+        correlation_matrix[i, j] = covariance_matrix[i,j]/(covariance_matrix[i,i]*covariance_matrix[j,j])**0.5
+        fraction_error_matrix[i, j] = covariance_matrix[i,j]**0.5 / (data_list[i] * data_list[j])**0.5
+    
+plt.imshow(correlation_matrix)
+plt.colorbar()
+plt.xlabel('Row Index')
+plt.ylabel('Column Index')
+plt.title('Correlation Matrix')
+plt.show()
+
+
+fig, ax = plt.subplots()
+ax.errorbar(helper_object.r, xi_IRrs, yerr=np.diag(covariance_matrix)**.5)
+plt.xlabel('r (Mpc)')
+plt.ylabel('Correlation Function')
+plt.title('Correlation Function With Error Bars')
+plt.show()
+print(np.diag(covariance_matrix)**0.5/data_list)
+
+'''
+fig, ax = plt.subplots()
+ax.errorbar(helper_object.r, xi_IRrs, yerr=xi_IRrs_std)
+
+ax.set_xlabel('r')
+ax.set_ylabel('xi_IRrs')
+ax.set_title('Correlation Function with error bars')
+
+
+plt.show()
+
+
 for x, a in enumerate(alphas):
     for l, l_ in enumerate(helper_object.r):
         for m, m_ in enumerate(helper_object.r):
@@ -286,10 +330,12 @@ for x, a in enumerate(alphas):
 
 likelihood_taylor = np.zeros(100)
 for x, a in enumerate(alphas):
-    model = b1 * (xi_IRrs + xi_IRrs_prime * (a - 1) + xi_IRrs_prime2 * (a - 1)**2 + 1./6 * xi_IRrs_prime3 * (a - 1)**3.)
+    model = b1 * (xi_IRrs + xi_IRrs_prime * (a - 1) + xi_IRrs_prime2 * (a - 1)**2 + 1./6 * xi_IRrs_prime3 \
+                  * (a - 1)**3.)
     for l in range(30):
         for m in range(30):
-            likelihood_taylor[x] += -0.5 * precision[l][m] * (data_list[l] - model[l]) * (data_list[m] - model[m])
+            likelihood_taylor[x] += -0.5 * precision[l][m] * (data_list[l] - model[l]) * (data_list[m] \
+                                                                                          - model[m])
 
 plt.figure()
 plt.plot(alphas, likelihood, label=r'$\mathcal{B}$ * $P_{IR}$(k/alpha)')
@@ -299,6 +345,7 @@ plt.ylabel(r'ln $\mathcal{L}$')
 plt.title(r'ln $\mathcal{L}$ vs $\alpha$')
 plt.grid()
 plt.show()
+'''
 
 '''
 alpha = 0.99
@@ -313,7 +360,8 @@ xi_IRrs_prime2 = helper_object.templates_deriv2()
 xi_IRrs_prime3 = helper_object.templates_deriv3()
 
 model_spline = b1 * xi_IRrs_splined(helper_object.r / alpha)
-model_taylor = b1 * (xi_IRrs + xi_IRrs_prime * (alpha - 1) + xi_IRrs_prime2 * (alpha - 1)**2 + 1./6 * xi_IRrs_prime3 * (alpha - 1)**3.)
+model_taylor = b1 * (xi_IRrs + xi_IRrs_prime * (alpha - 1) + xi_IRrs_prime2 * (alpha - 1)**2 + 1./6 \
+                     * xi_IRrs_prime3 * (alpha - 1)**3.)
 plt.figure()
 plt.plot(model_spline)
 plt.plot(model_taylor)
