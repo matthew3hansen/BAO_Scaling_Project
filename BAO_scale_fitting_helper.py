@@ -202,8 +202,8 @@ class Info:
     
     
     def calc_covariance_matrix(self):
-        self.covariance_matrix = np.loadtxt('covariance_matrix_new_fixed.txt', usecols=range(30))
-        '''
+        #self.covariance_matrix = np.loadtxt('covariance_matrix_11-26-21.txt', usecols=range(30))
+        
         #New Method for Covariance Matrix
         for i in range(len(self.r)):
             self.xi_gg[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
@@ -245,7 +245,7 @@ class Info:
                 if i == j:
                     xi_IRrs_alpha = np.sum(1 / (2 * math.pi**2) * self.ks[:,np.newaxis]**2 * \
                                            special.spherical_jn(0, self.alpha * self.ks[:,np.newaxis] * r_bins_1) \
-  						* np.exp(-self.ks[:,np.newaxis]**2) * self.P_IRres[:, np.newaxis] * \
+  						* np.exp(-self.ks[:,np.newaxis]**2) * self.b1**2 * self.P_IRres[:, np.newaxis] * \
                               np.gradient(self.ks)[:,np.newaxis], axis=0)
                     #print(time.time() - start_time)
                     dirac_cf_diag = xi_IRrs_alpha / self.delta_r
@@ -319,7 +319,7 @@ class Info:
                     #self.covariance_matrix[i][j] += dirac_matrix[i][j] + dirac_cf_matrix[i][j]
                         							
         np.savetxt('covariance_matrix_11-26-21.txt', self.covariance_matrix)
-        '''
+        
         
     def calc_CF(self):
         self.xi_gg_data = np.zeros(len(self.r))
@@ -342,7 +342,7 @@ class Info:
     
         for i in range(len(self.r)):
             self.xi_IRrs[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
-            special.spherical_jn(0, self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+            special.spherical_jn(0, self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.b1**2 * self.P_IRres * np.gradient(self.ks))
     
         return self.xi_IRrs
     
@@ -352,7 +352,7 @@ class Info:
     
         for i in range(len(self.r)):
             self.xi_IRrs_prime[i] = -self.r_bins[i] * np.sum(1 / (2 * math.pi**2) * self.ks**3 * special.spherical_jn(1, self.ks * self.r_bins[i]) * np.exp(-self.ks**2)\
-                                                         * self.P_IRres * np.gradient(self.ks))
+                                                         *self.b1**2 *  self.P_IRres * np.gradient(self.ks))
         return self.xi_IRrs_prime
     
     
@@ -361,7 +361,7 @@ class Info:
     
         for i in range(len(self.r)):
             self.xi_IRrs_prime2[i] = self.r_bins[i]**2 * np.sum(1 / (2 * math.pi**2) * self.ks**4 * (special.spherical_jn(2, self.ks * self.r_bins[i]) - (1 / (self.ks * self.r_bins[i])) \
-                                                                 * special.spherical_jn(1, self.ks * self.r_bins[i])) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))    
+                                                                 * special.spherical_jn(1, self.ks * self.r_bins[i])) * np.exp(-self.ks**2) * self.b1**2 * self.P_IRres * np.gradient(self.ks))    
         return self.xi_IRrs_prime2
     
     
@@ -373,17 +373,17 @@ class Info:
                                                                 special.spherical_jn(3, self.ks * self.r_bins[i]) \
                                                                 + (2. / (self.ks * self.r_bins[i])) \
                                                                 * special.spherical_jn(2, self.ks * self.r_bins[i])) \
-                                                                * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+                                                                * np.exp(-self.ks**2) * self.b1**2 * self.P_IRres * np.gradient(self.ks))
                 
             self.xi_IRrs_prime3[i] += self.r_bins[i] * np.sum(1. / (2. * math.pi**2) * self.ks**3 * ( \
                                                                 special.spherical_jn(1, self.ks * self.r_bins[i])) \
-                                                                * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+                                                                * np.exp(-self.ks**2) * self.b1**2 * self.P_IRres * np.gradient(self.ks))
                 
             self.xi_IRrs_prime3[i] += self.r_bins[i]**2 * np.sum(1. / (2. * math.pi**2) * self.ks**4 * ( \
                                                                 special.spherical_jn(2, self.ks * self.r_bins[i]) \
                                                                 + (1. / (self.ks * self.r_bins[i])) \
                                                                 * special.spherical_jn(1, self.ks * self.r_bins[i])) \
-                                                                * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+                                                                * np.exp(-self.ks**2) * self.b1**2 * self.P_IRres * np.gradient(self.ks))
         
         return self.xi_IRrs_prime3
     
@@ -392,7 +392,9 @@ class Info:
         self.xi_IRrs_alpha = np.zeros(len(self.r))
     
         for i in range(len(self.r)):
-            self.xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+            self.xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
+                                           special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * \
+                                               np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
     
         return self.xi_IRrs_alpha
     
@@ -401,7 +403,8 @@ class Info:
         self.xi_IRrs_alpha_prime = np.zeros(len(self.r))
     
         for i in range(len(self.r)):
-            self.xi_IRrs_alpha_prime[i] = -self.r_bins[i] * np.sum(1 / (2 * math.pi**2) * self.ks**3 * special.spherical_jn(1, self.alpha * self.ks * self.r_bins[i]) * np.exp(-self.ks**2)\
+            self.xi_IRrs_alpha_prime[i] = -self.r_bins[i] * np.sum(1 / (2 * math.pi**2) * self.ks**3 * \
+                                                                   special.spherical_jn(1, self.alpha * self.ks * self.r_bins[i]) * np.exp(-self.ks**2)\
                                                          * self.P_IRres * np.gradient(self.ks))
         return self.xi_IRrs_alpha_prime
     
@@ -419,7 +422,7 @@ class Info:
         
         for i in range(len(self.r)):
             self.xi_IRrs_alpha_prime3[i] = self.r_bins[i]**3 * np.sum(1 / (2 * math.pi**2) * self.ks**5 * \
-                                                                (-1 * special.spherical_jn(3, self.alpha * elf.ks * self.r_bins[i]) \
+                                                                (-1 * special.spherical_jn(3, self.alpha * self.ks * self.r_bins[i]) \
                                                                  + (2. / (self.ks * self.r_bins[i])) * special.spherical_jn(2, self.alpha * self.ks * self.r_bins[i]) \
                                                                     + special.spherical_jn(2, self.alpha * self.ks * self.r_bins[i]) \
                                                                     - (1. / (self.ks * self.r_bins[i])) * special.spherical_jn(1, self.alpha * self.ks * self.r_bins[i])) \
