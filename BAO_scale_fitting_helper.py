@@ -64,7 +64,7 @@ class Info:
         self.ks = self.k
         self.pk_lin_z0 = self.pk
         self.pk_lin_z0_2 = None
-    		    
+                
         ## Or get from your preferred Boltzmann code
     
         # Note: k needs to be evenly log spaced. FAST-PT will raise an error if it's not.
@@ -106,7 +106,7 @@ class Info:
             #zval = 1/np.logspace(np.log10(afid),0.0,100)-1.0
             Dz   = np.exp(-np.trapz(cc.Om(zval)**0.55,x=np.log(1/(1+zval)),axis=0))
             return(Dz)
-    			
+                
         # round-number cosmology is good enough!
         from astropy.cosmology import FlatLambdaCDM
         cosmo = FlatLambdaCDM(H0=70.,Om0=0.3)
@@ -181,12 +181,12 @@ class Info:
     
         # Combine for P_gg or P_mg
         self.P_gg = ((self.b1 * self.b1) * self.P_IRres) #+
-    		        #0.5*(self.b1 * self.b2 * 2) * self.Pd1d2 +
-    		        #0.25*(self.b2 * self.b2) * (self.Pd2d2 - 2.*self.s4) +
-    		        #0.5*(self.b1 * self.bs * 2) * self.Pd1s2 +
-    		        #0.25*(self.b2 * self.bs * 2) * (self.Pd2s2 - (4./3.)*self.s4) +
-    		        #0.25*(self.bs * self.bs) * (self.Ps2s2 - (8./9.)*self.s4) +
-    		        #0.5*(self.b1 * self.b3nl * 2) * self.Pd1p3)
+                    #0.5*(self.b1 * self.b2 * 2) * self.Pd1d2 +
+                    #0.25*(self.b2 * self.b2) * (self.Pd2d2 - 2.*self.s4) +
+                    #0.5*(self.b1 * self.bs * 2) * self.Pd1s2 +
+                    #0.25*(self.b2 * self.bs * 2) * (self.Pd2s2 - (4./3.)*self.s4) +
+                    #0.25*(self.bs * self.bs) * (self.Ps2s2 - (8./9.)*self.s4) +
+                    #0.5*(self.b1 * self.b3nl * 2) * self.Pd1p3)
     
         self.x = [_ for _ in range(len(self.P_gg))]
         
@@ -196,129 +196,135 @@ class Info:
         self.xi_gg = np.zeros(len(self.r))
         self.R1, self.R2 = np.meshgrid(self.r, self.r)
         self.delta_r = self.r_bins[1] - self.r_bins[0] 
-    		
+            
     def get_r(self):
         return self.r
     
     
     def calc_covariance_matrix(self):
-        #self.covariance_matrix = np.loadtxt('covariance_matrix_11-26-21.txt', usecols=range(30))
-        
-        #New Method for Covariance Matrix
-        for i in range(len(self.r)):
-            self.xi_gg[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
-                                   special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * \
-                                       np.exp(-self.ks**2) * self.P_gg * np.gradient(self.ks))
-  		
-        #r_bins = np.linspace(r_min, r_max, 100)
-        self.covariance_matrix = np.zeros((len(self.r), len(self.r)))
-        
-        for i in range(len(self.r)):
-            print(i)
-            for j in range(len(self.r)):
-                #start_time = time.time()
+        if os.path.exists('covariance_matrix_11-26-21.txt'):
+            self.covariance_matrix = np.loadtxt('covariance_matrix_11-26-21.txt', usecols=range(30))
+        else:
+            #New Method for Covariance Matrix
+            for i in range(len(self.r)):
+                self.xi_gg[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
+                                       special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * \
+                                           np.exp(-self.ks**2) * self.P_gg * np.gradient(self.ks))
+              
+            #r_bins = np.linspace(r_min, r_max, 100)
+            self.covariance_matrix = np.zeros((len(self.r), len(self.r)))
+            
+            for i in range(len(self.r)):
+                print(i)
                 N_small_r = 25
                 r_bins_1 = np.linspace(self.r_bins[i], self.r_bins[i+1], N_small_r)
-                r_bins_2 = np.linspace(self.r_bins[j], self.r_bins[j+1], N_small_r)
                 delta_r = r_bins_1[1] - r_bins_1[0] #(r_max - r_bins)/N_small_r
-                
-  
-                R1, R2 = np.meshgrid(r_bins_1, r_bins_2)
-                #print(time.time() - start_time)
-                # use b1 ^2 * Pklin in the covariance matrix
-                j0_return = 2./(self.effective_volume * self.number_density * np.pi**2.) *\
-                    j0j0.rotation_method_bessel_j0j0(self.ks, self.b1 ** 2 * self.pk_lin_z0 * self.growth **2., R1, R2)
-                # this one may need to be corrected to include P2, P4, if we are fitting xi0 (or are we fitting xi(r))?
-                j0_return_pk_sq = 1./(self.effective_volume * np.pi**2.) * \
-                    j0j0.rotation_method_bessel_j0j0(self.ks, (self.b1 ** 2 * self.pk_lin_z0 * self.growth **2.)**2., R1, R2)
-                #print('j0:', time.time() - start_time)
-                
-                #print('new: ', np.diag(j0_return))
-                self.covariance_matrix[i][j] = (4 * math.pi)**2. / ((4/3 * math.pi)**2. * \
-                                                                    (self.r_bins[i+1]**3 - self.r_bins[i]**3) * \
-                                                                        (self.r_bins[j+1]**3 - self.r_bins[j]**3)) \
-                                                * np.sum(R1 **2 * R2 **2 *(j0_return + j0_return_pk_sq) * delta_r * delta_r)
-                #print(self.covariance_matrix[i][j])
-                #print((4 * math.pi)**2. / ((4/3 * math.pi)**2. * (self.r_bins[i+1]**3 - self.r_bins[i]**3) * (self.r_bins[j+1]**3 - self.r_bins[j]**3)) \
-                     # * np.sum(R1**2 * R2 **2 * (j0_return) * delta_r * delta_r))
-                
-                if i == j:
-                    xi_IRrs_alpha = np.sum(1 / (2 * math.pi**2) * self.ks[:,np.newaxis]**2 * \
-                                           special.spherical_jn(0, self.alpha * self.ks[:,np.newaxis] * r_bins_1) \
-  						* np.exp(-self.ks[:,np.newaxis]**2) * self.b1**2 * self.P_IRres[:, np.newaxis] * \
-                              np.gradient(self.ks)[:,np.newaxis], axis=0)
+                for j in range(len(self.r)):
+                    #start_time = time.time()
+                    r_bins_2 = np.linspace(self.r_bins[j], self.r_bins[j+1], N_small_r)
+                    
+      
+                    R1, R2 = np.meshgrid(r_bins_1, r_bins_2)
                     #print(time.time() - start_time)
-                    dirac_cf_diag = xi_IRrs_alpha / self.delta_r
-                    dirac_cf_matrix = np.diag(dirac_cf_diag)
-                    dirac_cf_matrix *= 1 / (self.effective_volume * self.number_density**2)
-                    dirac_cf_matrix *= 2/(4 * np.pi * r_bins_1**2.)
-  
-                    a = np.zeros((len(r_bins_1), len(r_bins_2)))
-                    np.fill_diagonal(a, 1)
-                    dirac_matrix = a
-                    dirac_matrix *= 1 / (self.effective_volume * self.number_density**2)
-                    dirac_matrix /= self.delta_r
-                    dirac_matrix *= 2 / (4 * np.pi * r_bins_1**2.)
-                   # print((4 * math.pi)**2. / ((4/3 * math.pi)**2. * (self.r_bins[i+1]**3 - self.r_bins[i]**3) * (self.r_bins[j+1]**3 - self.r_bins[j]**3)) \
-                     # * np.sum(R1**2 * R2 **2 * (j0_return) * delta_r * delta_r))
-                        
-                    #print(np.sum(R1**2 * R2**2 * (j0_return) * delta_r * delta_r))
-                    #print(np.sum(R1**2 * R2**2 * (j0_return) * delta_r * delta_r))
-                    
-                    self.covariance_matrix[i][j] = (4 * math.pi)**2. / ((4/3 * math.pi)**2. * \
-                                                                        (self.r_bins[i+1]**3 - self.r_bins[i]**3) * \
-                                                                            (self.r_bins[j+1]**3 - self.r_bins[j]**3)) \
-                                                    * np.sum(R1 **2 * R2 **2 * (j0_return + j0_return_pk_sq + \
-                                                                                dirac_matrix + dirac_cf_matrix) * \
-                                                             delta_r * delta_r)
-                    #print(self.covariance_matrix[i][j])
-                    #print((self.r_bins[i+1]**3 - self.r_bins[i]**3) * (self.r_bins[j+1]**3 - self.r_bins[j]**3))
-                    #print((self.r_bins[i+1]**3 - self.r_bins[i]**3)**2.)
-                    
-                    if i == 0:
-                        print(self.covariance_matrix[i][j])
-                    
-                   #covariance_in_integrand = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
-                    #print(np.diag(dirac_matrix))
-                    #if (i == 0) and (j == 0):
-                    xi_IRrs_alpha = np.zeros(len(self.r))
-                    for i in range(len(self.r)):
-                        self.xi_gg[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
-                                               special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * \
-                                                   np.exp(-self.ks**2) * self.P_gg * np.gradient(self.ks))
-                        
-                    for i in range(len(self.r)):
-                        xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
-                                                  special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * \
-                                                      np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
                     # use b1 ^2 * Pklin in the covariance matrix
-                    j0_return = 2./(self.effective_volume * self.number_density * np.pi**2.) * \
-                        j0j0.rotation_method_bessel_j0j0(self.ks, self.b1 ** 2 * self.pk_lin_z0 * \
-                                                         self.growth **2., self.R1, self.R2)
+                    j0_return = 2./(self.effective_volume * self.number_density * np.pi**2.) *\
+                                j0j0.rotation_method_bessel_j0j0(self.ks, self.b1 ** 2 * self.pk_lin_z0 * self.growth **2., R1, R2)
                     # this one may need to be corrected to include P2, P4, if we are fitting xi0 (or are we fitting xi(r))?
                     j0_return_pk_sq = 1./(self.effective_volume * np.pi**2.) * \
-                        j0j0.rotation_method_bessel_j0j0(self.ks, (self.b1 ** 2 * self.pk_lin_z0 * self.growth **2.)**2., \
-                                                         self.R1, self.R2)
+                                        j0j0.rotation_method_bessel_j0j0(self.ks, (self.b1 ** 2 * self.pk_lin_z0 * self.growth **2.)**2., R1, R2)
+                    #print('j0:', time.time() - start_time)
                     
-                    dirac_cf_diag = xi_IRrs_alpha / self.delta_r
-                    dirac_cf_matrix = np.diag(dirac_cf_diag)
-                    dirac_cf_matrix *= 1 / (self.effective_volume * self.number_density**2)
-                    dirac_cf_matrix *= 2/(4 * np.pi * self.r**2.)
+                    #print('new: ', np.diag(j0_return))
+                    if i != j:
+                        self.covariance_matrix[i][j] = (4 * math.pi)**2. / ((4/3 * math.pi)**2. * \
+                                                                        (self.r_bins[i+1]**3 - self.r_bins[i]**3) * \
+                                                                            (self.r_bins[j+1]**3 - self.r_bins[j]**3)) \
+                                                        * np.sum(R1 **2 * R2 **2 *(j0_return + j0_return_pk_sq) * delta_r * delta_r)
+                    #print(self.covariance_matrix[i][j])
+                    #print((4 * math.pi)**2. / ((4/3 * math.pi)**2. * (self.r_bins[i+1]**3 - self.r_bins[i]**3) * (self.r_bins[j+1]**3 - self.r_bins[j]**3)) \
+                         # * np.sum(R1**2 * R2 **2 * (j0_return) * delta_r * delta_r))
                     
-                    a = np.zeros((30,30))
-                    np.fill_diagonal(a, 1)
-                    dirac_matrix = a
-                    dirac_matrix *= 1 / (self.effective_volume * self.number_density**2)
-                    dirac_matrix /= self.delta_r
-                    dirac_matrix *= 2 / (4 * np.pi * self.r**2.)
+                    if i == j:
+                        xi_IRrs_alpha = np.sum(1 / (2 * math.pi**2) * self.ks[:,np.newaxis]**2 * \
+                                               special.spherical_jn(0, self.alpha * self.ks[:,np.newaxis] * r_bins_1) \
+                                            * np.exp(-self.ks[:,np.newaxis]**2) * self.b1**2 * self.P_IRres[:, np.newaxis] * \
+                                            np.gradient(self.ks)[:,np.newaxis], axis=0)
+                        #print(time.time() - start_time)
+                        dirac_cf_diag = xi_IRrs_alpha / self.delta_r
+                        dirac_cf_matrix = np.diag(dirac_cf_diag)
+                        dirac_cf_matrix *= 1 / (self.effective_volume * self.number_density**2)
+                        dirac_cf_matrix *= 2/(4 * np.pi * r_bins_1**2.)
+      
+                        a = np.zeros((len(r_bins_1), len(r_bins_2)))
+                        np.fill_diagonal(a, 1)
+                        dirac_matrix = a
+                        dirac_matrix *= 1 / (self.effective_volume * self.number_density**2)
+                        dirac_matrix /= self.delta_r
+                        dirac_matrix *= 2 / (4 * np.pi * r_bins_1**2.)
+                       # print((4 * math.pi)**2. / ((4/3 * math.pi)**2. * (self.r_bins[i+1]**3 - self.r_bins[i]**3) * (self.r_bins[j+1]**3 - self.r_bins[j]**3)) \
+                         # * np.sum(R1**2 * R2 **2 * (j0_return) * delta_r * delta_r))
+                            
+                        #print(np.sum(R1**2 * R2**2 * (j0_return) * delta_r * delta_r))
+                        #print(np.sum(R1**2 * R2**2 * (j0_return) * delta_r * delta_r))
+                        
+                        self.covariance_matrix[i][j] = (4 * math.pi)**2. / ((4/3 * math.pi)**2. * \
+                                                                            (self.r_bins[i+1]**3 - self.r_bins[i]**3) * \
+                                                                            (self.r_bins[j+1]**3 - self.r_bins[j]**3)) \
+                                                        * np.sum(R1 **2 * R2 **2 * (j0_return + j0_return_pk_sq + \
+                                                                                    dirac_matrix + dirac_cf_matrix) * \
+                                                                 delta_r * delta_r)
+                        #print(self.covariance_matrix[i][j])
+                        #print((self.r_bins[i+1]**3 - self.r_bins[i]**3) * (self.r_bins[j+1]**3 - self.r_bins[j]**3))
+                        #print((self.r_bins[i+1]**3 - self.r_bins[i]**3)**2.)
+                        
+    # =============================================================================
+    #                     if i == 0:
+    #                         print(self.covariance_matrix[i][j])
+    #                     
+    #                    #covariance_in_integrand = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
+    #                     #print(np.diag(dirac_matrix))
+    #                     #if (i == 0) and (j == 0):
+    #                     xi_IRrs_alpha = np.zeros(len(self.r))
+    #                     for i in range(len(self.r)):
+    #                         self.xi_gg[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
+    #                                                special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * \
+    #                                                    np.exp(-self.ks**2) * self.P_gg * np.gradient(self.ks))
+    #                         
+    #                     for i in range(len(self.r)):
+    #                         xi_IRrs_alpha[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
+    #                                                   special.spherical_jn(0, self.alpha * self.ks * self.r_bins[i]) * \
+    #                                                       np.exp(-self.ks**2) * self.P_IRres * np.gradient(self.ks))
+    #                     # use b1 ^2 * Pklin in the covariance matrix
+    #                     j0_return = 2./(self.effective_volume * self.number_density * np.pi**2.) * \
+    #                         j0j0.rotation_method_bessel_j0j0(self.ks, self.b1 ** 2 * self.pk_lin_z0 * \
+    #                                                          self.growth **2., self.R1, self.R2)
+    #                     # this one may need to be corrected to include P2, P4, if we are fitting xi0 (or are we fitting xi(r))?
+    #                     j0_return_pk_sq = 1./(self.effective_volume * np.pi**2.) * \
+    #                         j0j0.rotation_method_bessel_j0j0(self.ks, (self.b1 ** 2 * self.pk_lin_z0 * self.growth **2.)**2., \
+    #                                                          self.R1, self.R2)
+    #                     
+    #                     dirac_cf_diag = xi_IRrs_alpha / self.delta_r
+    #                     dirac_cf_matrix = np.diag(dirac_cf_diag)
+    #                     dirac_cf_matrix *= 1 / (self.effective_volume * self.number_density**2)
+    #                     dirac_cf_matrix *= 2/(4 * np.pi * self.r**2.)
+    #                     
+    #                     a = np.zeros((30,30))
+    #                     np.fill_diagonal(a, 1)
+    #                     dirac_matrix = a
+    #                     dirac_matrix *= 1 / (self.effective_volume * self.number_density**2)
+    #                     dirac_matrix /= self.delta_r
+    #                     dirac_matrix *= 2 / (4 * np.pi * self.r**2.)
+    #                     
+    #                     #self.covariance_matrix_old = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
+    #                     #print(dirac_matrix[0][0])
+    # =============================================================================
+                        
+                        
+                        #self.covariance_matrix[i][j] += dirac_matrix[i][j] + dirac_cf_matrix[i][j]
+                    print(self.covariance_matrix[i][j])
                     
-                    #self.covariance_matrix_old = j0_return + j0_return_pk_sq + dirac_cf_matrix + dirac_matrix
-                    #print(dirac_matrix[0][0])
-                    
-                    
-                    #self.covariance_matrix[i][j] += dirac_matrix[i][j] + dirac_cf_matrix[i][j]
-                        							
-        np.savetxt('covariance_matrix_11-26-21.txt', self.covariance_matrix)
+            np.savetxt('covariance_matrix_11-26-21.txt', self.covariance_matrix)
+            
         
         
     def calc_CF(self):
@@ -342,7 +348,7 @@ class Info:
     
         for i in range(len(self.r)):
             self.xi_IRrs[i] = np.sum(1 / (2 * math.pi**2) * self.ks**2 * \
-            special.spherical_jn(0, self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.b1**2 * self.P_IRres * np.gradient(self.ks))
+            special.spherical_jn(0, self.ks * self.r_bins[i]) * np.exp(-self.ks**2) * self.b1^2 * self.P_IRres * np.gradient(self.ks))
     
         return self.xi_IRrs
     

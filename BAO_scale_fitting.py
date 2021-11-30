@@ -11,6 +11,7 @@ import timeit
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline
 from matplotlib import pyplot as plt
 
+
 def fixed_linear_bias(alpha = 1.0):
     helper_object = BAO_scale_fitting_helper.Info(alpha)
         
@@ -260,9 +261,6 @@ def delta_alpha(data_list, xi_IRrs, xi_IRrs_prime, xi_IRrs_prime2, xi_IRrs_prime
     return value
 
 
-alphas = np.linspace(0.96, 1.035, 100)
-likelihood = np.zeros(100)
-
 helper_object = BAO_scale_fitting_helper.Info(1.0)
 helper_object.calc_covariance_matrix()
 helper_object.calc_CF()
@@ -274,97 +272,111 @@ xi_IRrs_prime2 = helper_object.templates_deriv2()
 xi_IRrs_prime3 = helper_object.templates_deriv3()
 precision = np.linalg.inv(covariance_matrix)
 b1 = helper_object.get_biases()
-
 xi_IRrs_splined = Spline(helper_object.r, xi_IRrs)
 
-#Below is the plot the corvariance matrices
-plt.imshow(covariance_matrix)
-plt.colorbar()
-plt.xlabel('Row Index')
-plt.ylabel('Column Index')
-plt.title('Covariance Matrix')
-plt.show()
-
+def covariance_plot():
+    #Below is the plot the corvariance matrices
+    plt.imshow(covariance_matrix, vmin=-1e-7)
+    plt.colorbar()
+    plt.xlabel('Row Index', fontsize=15)
+    plt.ylabel('Column Index', fontsize=15)
+    plt.title('Covariance Matrix', fontsize=15)
+    plt.tight_layout()
+    #plt.savefig('Covariance_matrix_11-29-21.pdf')
+    plt.show()
+    
+#covariance_plot()
+    
 correlation_matrix = np.zeros_like(covariance_matrix)
 fraction_error_matrix = np.zeros_like(covariance_matrix)
 
 for i in range(np.shape(covariance_matrix)[0]):
     for j in range(np.shape(covariance_matrix)[0]):
         correlation_matrix[i, j] = covariance_matrix[i,j]/(covariance_matrix[i,i]*covariance_matrix[j,j])**0.5
-        fraction_error_matrix[i, j] = covariance_matrix[i,j]**0.5 / (data_list[i] * data_list[j])**0.5
+        #fraction_error_matrix[i, j] = covariance_matrix[i,j]**0.5 / (data_list[i] * data_list[j])**0.5
+
+def correlation_plot():
+    plt.imshow(correlation_matrix)
+    plt.colorbar()
+    plt.xlabel('Row Index', fontsize=15)
+    plt.ylabel('Column Index', fontsize=15)
+    plt.title('Correlation Matrix', fontsize=15)
+    plt.tight_layout()
+    #plt.savefig('Correlation_matrix_11-27-21.pdf')
+    plt.show()
     
-plt.imshow(correlation_matrix)
-plt.colorbar()
-plt.xlabel('Row Index')
-plt.ylabel('Column Index')
-plt.title('Correlation Matrix')
-plt.show()
+#correlation_plot()
 
+def error_plot():
+    plt.errorbar(helper_object.r, (helper_object.r)**2 * xi_IRrs, yerr=(helper_object.r)**2 *np.diag(covariance_matrix)**.5)
+    plt.xlabel(r'r ($h^{-1}$ Mpc)', fontsize=15)
+    plt.ylabel(r'$r^2 \xi$(r)', fontsize=15)
+    plt.title('Correlation Function of Mock Data', fontsize=15)
+    plt.grid()
+    for tick in plt.gca().xaxis.get_major_ticks():
+        tick.label.set_fontsize(20)
+    for tick in plt.gca().yaxis.get_major_ticks():
+        tick.label.set_fontsize(20)
+    plt.xticks([30, 60, 90, 120, 150, 180])
+    plt.xlim(30, 180)
+    plt.tight_layout()
+    #plt.savefig('correlation_mock_data_11-29-21.pdf')
+    plt.show()
+    
+#error_plot()
 
-fig, ax = plt.subplots()
-ax.errorbar(helper_object.r, xi_IRrs, yerr=np.diag(covariance_matrix)**.5)
-plt.xlabel('r (Mpc)')
-plt.ylabel('Correlation Function')
-plt.title('Correlation Function With Error Bars')
-plt.show()
-print(np.diag(covariance_matrix)**0.5/data_list)
+def scaling_plot():
+    plt.plot(helper_object.r, (helper_object.r)**2 * xi_IRrs_splined(helper_object.r), label=r'$\alpha$ = 1')
+    plt.plot(helper_object.r, (helper_object.r * 1.1)**2 * xi_IRrs_splined(1.1 * helper_object.r), 'm--', label=r'$\alpha$ = 1.1')
+    plt.plot(helper_object.r, (helper_object.r * 0.9)**2 * xi_IRrs_splined(0.9 * helper_object.r), 'r.', label=r'$\alpha$ = 0.9')
+    #plt.yscale('log')
+    plt.xlabel(r'r ($h^{-1}$ Mpc)', fontsize=15)
+    plt.ylabel(r'$(\alpha r)^2 \xi$($\alpha$r)', fontsize=15)
+    plt.title(r'Dilation of the BAO Scaling Parameter $\alpha$', fontsize=15)
+    plt.grid()
+    for tick in plt.gca().xaxis.get_major_ticks():
+        tick.label.set_fontsize(20)
+    for tick in plt.gca().yaxis.get_major_ticks():
+        tick.label.set_fontsize(20)
+    plt.xticks([30, 60, 90, 120, 150, 180])
+    plt.yticks([-20, 20, 60, 100])
+    plt.xlim(30, 180)
+    plt.legend()
+    plt.tight_layout()
+    #plt.savefig('dilation_BAO_11-29-21.pdf')
+    plt.show()  
 
-'''
-fig, ax = plt.subplots()
-ax.errorbar(helper_object.r, xi_IRrs, yerr=xi_IRrs_std)
-
-ax.set_xlabel('r')
-ax.set_ylabel('xi_IRrs')
-ax.set_title('Correlation Function with error bars')
-
-
-plt.show()
-
+#scaling_plot()
+    
+alphas = np.linspace(0.5, 1.5, 100)
+likelihood = np.zeros(100)
 
 for x, a in enumerate(alphas):
     for l, l_ in enumerate(helper_object.r):
         for m, m_ in enumerate(helper_object.r):
-            likelihood[x] += -0.5 * precision[l][m] * (data_list[l] - b1 * xi_IRrs_splined(l_ / a)) \
-                * (data_list[m] - b1 * xi_IRrs_splined(m_ / a))
-
+            likelihood[x] += -0.5 * precision[l][m] * (data_list[l] - b1 * xi_IRrs_splined(l_ * a)) \
+                                                * (data_list[m] - b1 * xi_IRrs_splined(m_ * a))
+                                                
+plt.plot(alphas, likelihood, label=r'$\mathcal{B}$ * $P_{IR}$(k/alpha)')
 
 likelihood_taylor = np.zeros(100)
 for x, a in enumerate(alphas):
-    model = b1 * (xi_IRrs + xi_IRrs_prime * (a - 1) + xi_IRrs_prime2 * (a - 1)**2 + 1./6 * xi_IRrs_prime3 \
-                  * (a - 1)**3.)
+    model = b1 * (xi_IRrs + xi_IRrs_prime * (a - 1) + xi_IRrs_prime2 * (a - 1)**2 + 1./6 * xi_IRrs_prime3 * (a - 1)**3.)
     for l in range(30):
         for m in range(30):
-            likelihood_taylor[x] += -0.5 * precision[l][m] * (data_list[l] - model[l]) * (data_list[m] \
-                                                                                          - model[m])
-
+            likelihood_taylor[x] += -0.5 * precision[l][m] * (data_list[l] - model[l]) * (data_list[m] - model[m])
 plt.figure()
-plt.plot(alphas, likelihood, label=r'$\mathcal{B}$ * $P_{IR}$(k/alpha)')
 plt.plot(alphas, likelihood_taylor, label='Taylor Expansion')
-plt.xlabel(r'$\alpha$')
-plt.ylabel(r'ln $\mathcal{L}$')
-plt.title(r'ln $\mathcal{L}$ vs $\alpha$')
-plt.grid()
-plt.show()
-'''
 
-'''
-alpha = 0.99
-helper_object = BAO_scale_fitting_helper.Info(a)
-helper_object.calc_covariance_matrix()
-helper_object.calc_CF()
-data_list = helper_object.get_data()
-covariance_matrix = helper_object.get_covariance_matrix()
-xi_IRrs = helper_object.templates()
-xi_IRrs_prime = helper_object.templates_deriv()
-xi_IRrs_prime2 = helper_object.templates_deriv2()
-xi_IRrs_prime3 = helper_object.templates_deriv3()
-
-model_spline = b1 * xi_IRrs_splined(helper_object.r / alpha)
-model_taylor = b1 * (xi_IRrs + xi_IRrs_prime * (alpha - 1) + xi_IRrs_prime2 * (alpha - 1)**2 + 1./6 \
-                     * xi_IRrs_prime3 * (alpha - 1)**3.)
-plt.figure()
-plt.plot(model_spline)
-plt.plot(model_taylor)
-plt.grid()
-plt.show()
-'''
+def likelihood_plots():
+    plt.figure()
+    plt.plot(alphas, likelihood, label=r'$\mathcal{B}$ * $P_{IR}$(k/alpha)')
+    plt.plot(alphas, likelihood_taylor, label='Taylor Expansion')
+    plt.xlabel(r'$\alpha$', fontsize=15)
+    plt.ylabel(r'ln $\mathcal{L}$', fontsize=15)
+    plt.title(r'Likelihood with Fixed Bias', fontsize=15)
+    plt.legend()
+    plt.grid()
+    plt.show()
+    
+likelihood_plots()
