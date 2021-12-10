@@ -80,20 +80,14 @@ def fixed_linear_bias_second_order(alpha = 1.0):
     xi_IRrs_prime = helper_object.templates_deriv()
     
     xi_IRrs_prime2 = helper_object.templates_deriv2()
-    
-    xi_IRrs_prime3 = helper_object.templates_deriv3()
 
     precision = np.linalg.inv(covariance_matrix)
     script_b = helper_object.get_biases()
     #start = time.time()
     
-    temp = 3 * script_b * np.multiply.outer(xi_IRrs_prime, xi_IRrs_prime2)
-    temp1 = temp.transpose()
-    temp2 = 0 #script_b * np.multiply.outer(xi_IRrs_prime3, xi_IRrs)
-    temp3 = 0 #temp2.transpose()
-    temp4 = 0 #-1 * np.multiply.outer(xi_IRrs_prime3, data_list)
-    temp5 = 0 #temp4.transpose()
-    a_vec = (0.5 * script_b * np.multiply(precision, (temp + temp1 + temp2 + temp3 + temp4 + temp5))).sum()
+    #temp = 3 * script_b * np.multiply.outer(xi_IRrs_prime, xi_IRrs_prime2)
+    #temp1 = temp.transpose()
+    #a_vec = (0.5 * 0.5 * script_b * np.multiply(precision, (temp + temp1))).sum()
     
     temp1 = script_b * np.multiply.outer(xi_IRrs, xi_IRrs_prime2)
     temp2 = temp1.transpose()
@@ -108,7 +102,9 @@ def fixed_linear_bias_second_order(alpha = 1.0):
     temp9 = temp8.transpose()
     c_vec = (script_b * np.multiply(precision, (temp6 + temp7 + temp8 + temp9))).sum()
     
-    return ((-1 * b_vec + np.sqrt(b_vec**2. - 4 * a_vec * c_vec)) / (2 * a_vec))
+    return -c_vec / b_vec
+    
+    #return ((-1 * b_vec + np.sqrt(b_vec**2. - 4 * a_vec * c_vec)) / (2 * a_vec))
 
 def marginal_linear_bias(alpha = 1.0):
     helper_object = BAO_scale_fitting_helper.Info(alpha)
@@ -328,7 +324,7 @@ def marginal_linear_bias_second_order(alpha = 1.0):
     return (-B - np.sqrt(B**2 - 4 * A * C)) / (2 * A)
 
 
-helper_object = BAO_scale_fitting_helper.Info(1.01)
+helper_object = BAO_scale_fitting_helper.Info(1.077)
 helper_object.calc_covariance_matrix()
 helper_object.calc_CF()
 data_list = helper_object.get_data()
@@ -342,15 +338,7 @@ script_b = helper_object.get_biases()
 xi_IRrs_splined = Spline(helper_object.r, xi_IRrs)
 spline_arr = np.zeros_like(helper_object.r)
 
-for i, l in enumerate(helper_object.r):
-     spline_arr[i] = script_b[0] * xi_IRrs_splined(l * 1.07)
-     
-     
-print(data_list)
-print(spline_arr)
 
-difference_spline = spline_arr - data_list
-print(difference_spline)
 def scaling_plot():
     plt.plot(helper_object.r, (helper_object.r)**2 * script_b * xi_IRrs_splined(helper_object.r), label=r'$\alpha$ = 1', linewidth=3.0)
     plt.plot(helper_object.r, (helper_object.r * 1.1)**2 * script_b * xi_IRrs_splined(1.1 * helper_object.r), 'm--', label=r'$\alpha$ = 1.1', linewidth=3.0)
@@ -458,9 +446,31 @@ def scaling_plot():
 
 #scaling_plot()
 
-def likelihood_a_plot():
-    alphas = np.linspace(0.9, 1.03, 100)
+def likelihood_a_plot(alpha, data_list, xi_IRrs_splined):
+    alphas = np.linspace(alpha-0.02, alpha+0.02, 100)
     likelihood = np.zeros(100)
+    
+    temp1 = script_b * np.multiply.outer(xi_IRrs, xi_IRrs_prime2)
+    temp2 = temp1.transpose()
+    temp3 = 2 * script_b * np.multiply.outer(xi_IRrs_prime, xi_IRrs_prime)
+    temp4 = -1 * np.multiply.outer(data_list, xi_IRrs_prime2)
+    temp5 = temp4.transpose()
+    b_vec = (script_b * np.multiply(precision, (temp1 + temp2 + temp3 + temp4 + temp5))).sum()
+    
+    temp6 = script_b * np.multiply.outer(xi_IRrs, xi_IRrs_prime)
+    temp7 = temp6.transpose()
+    temp8 = -1 * np.multiply.outer(data_list, xi_IRrs_prime)
+    temp9 = temp8.transpose()
+    c_vec = (script_b * np.multiply(precision, (temp6 + temp7 + temp8 + temp9))).sum()
+    
+    delta_alpha = alphas - 1
+    constant = -0.5 * b_vec * 0.07**2 - c_vec * 0.07
+    #plt.plot(alphas, -1 * (0.5 * b_vec * delta_alpha**2 + c_vec * delta_alpha + constant))
+    
+    
+    #likelihood_15 = 
+    print(data_list)
+    print(script_b * xi_IRrs_splined(1.07 * helper_object.r))
     
     for x, a in enumerate(alphas):
         for l, l_ in enumerate(helper_object.r):
@@ -477,15 +487,15 @@ def likelihood_a_plot():
                 likelihood_taylor[x] += -0.5 * precision[l][m] * (data_list[l] - model[l]) * (data_list[m] - model[m])
                 likelihood_taylor_second[x] += -0.5 * precision[l][m] * (data_list[l] - model_second[l]) * (data_list[m] - model_second[m])
     
-    plt.figure()
+    #plt.figure()
     plt.plot(alphas, likelihood, color='black', label=r'Standard Method', linewidth=3.0)
     plt.plot(alphas, likelihood_taylor, '--', label='Taylor Expansion', linewidth=3.0)
     plt.plot(alphas, likelihood_taylor_second, color='orange', linestyle='dotted', label='Taylor Expansion Second-Order', linewidth=3.0)
     plt.xlabel(r'$\alpha$', fontsize=20)
     plt.ylabel(r'ln $\mathcal{L}$', fontsize=20)
     plt.title(r'Likelihood with Fixed $\mathcal{B}$', fontsize=20)
-    plt.xlim(0.99, 1.03)
-    plt.ylim(-30, 1)
+    #plt.xlim(0.99, 1.03)
+    #plt.ylim(-30, 1)
     #plt.xticks([0.98, 0.99, 1.0, 1.01, 1.02])
     for tick in plt.gca().xaxis.get_major_ticks():
         tick.label.set_fontsize(15)
@@ -503,7 +513,25 @@ def likelihood_a_plot():
     print(alphas[np.argmax(likelihood_taylor)])
     print(alphas[np.argmax(likelihood_taylor_second)])
     
-likelihood_a_plot()
+    
+    
+alphas = [1.08]
+for x in alphas:
+    helper_object = BAO_scale_fitting_helper.Info(x)
+    helper_object.calc_covariance_matrix()
+    helper_object.calc_CF()
+    data_list = helper_object.get_data()
+    covariance_matrix = helper_object.get_covariance_matrix()
+    xi_IRrs = helper_object.templates()
+    xi_IRrs_prime = helper_object.templates_deriv()
+    xi_IRrs_prime2 = helper_object.templates_deriv2()
+    xi_IRrs_prime3 = helper_object.templates_deriv3()
+    precision = np.linalg.inv(covariance_matrix)
+    script_b = helper_object.get_biases()
+    
+    xi_IRrs_splined = Spline(helper_object.r, xi_IRrs)
+    
+    likelihood_a_plot(x, data_list, xi_IRrs_splined)
 
 def likelihood_b_plot():
     script_b = np.linspace(5.7, 6.06, 100)
